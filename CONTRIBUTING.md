@@ -22,12 +22,13 @@ git config user.name "Your Name"
 git config user.email "your-github-username@users.noreply.github.com"
 ```
 
-4. Set up Python:
+4. Set up Python. The package needs nothing but the standard library:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-pytest
+pip install -e . --no-deps
+pip install pytest
+python -m pytest
 ```
 
 ## Branch and work
@@ -39,7 +40,7 @@ git fetch upstream
 git checkout -b kaleb/basics-count-min-max upstream/main
 ```
 
-Branch names start with your first name, for example `philimon/center-mean-median`, `robel/spread-variance`, `yoseph/tables-histogram`, `yonas/reference-checks`.
+Branch names start with your first name, for example `philimon/center-mean-median`, `robel/spread-variance`, `yoseph/tables-histogram`, `yonas/reference-checks`. All code lands in `src/stateskol/descriptive.py`, so stay inside your marked function block and never edit another owner's block. If you need a change there, leave a review comment on their PR instead.
 
 Commit with plain messages:
 
@@ -73,9 +74,9 @@ Same bar as the program page. Each feature PR holds all seven:
 
 ## Notes and diagrams
 
-Notes live in the vault, not here. Create them from a template (Concept for ideas, Research for small studies), fill the properties (`type`, `status`, `author`, `created`, `updated`, `tags`, `publish-status`), and link the note to the textbook section, the papers you read, and the sibling notes it relates to. A note that links to nothing is a dead end, link it up.
+Notes live in the vault, not here: [Eskolx-labs/Eskolx-Open-Knowledge](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge). Create them from a template (Concept for ideas, Research for small studies), fill the properties (`type`, `status`, `author`, `created`, `updated`, `tags`, `publish-status`), and link the note to the textbook section, the papers you read, and the sibling notes it relates to. A note that links to nothing is a dead end, link it up. New to the vault workflow? Start at [its contributing guide](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge/blob/main/CONTRIBUTING.md).
 
-Most notes carry a tldraw diagram. Draw the concept or the flow, save the scene under `90 Attachments/animations/` in the vault, and embed it in the note. Diagrams must open on a fresh clone with no local setup.
+Most notes carry a tldraw diagram. Draw the concept or the flow, save the scene under `90 Attachments/animations/` in the vault, and embed it in the note. Diagrams must open on a fresh clone with no local setup. How to draw one: [the vault tldraw guide](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge/blob/main/docs/tldraw.md).
 
 ## Reviewing
 
@@ -86,7 +87,7 @@ The PR is the review. When you review, check correctness first, then clarity:
 3. Does the reference comparison run and pass with a stated tolerance?
 4. Does the linked vault note stand alone for someone who was not in the room?
 5. Is there a diagram where one would help?
-6. Is the code pure Python inside `src/stateskol`, with numpy and friends only in tests and examples?
+6. Is the code standard library only inside `src/stateskol` and `tests`, with numpy and friends confined to `examples/reference_check.py`?
 
 Approve only when all six hold. Leave a comment naming what you checked by hand.
 
@@ -99,6 +100,12 @@ rg -i "password|api[_-]?key|token|BEGIN.*PRIVATE KEY" .
 ```
 
 No passwords, keys, tokens, or private keys in any file, ever.
+
+## Links
+
+- Code: [Eskolx-labs/stateskol](https://github.com/Eskolx-labs/stateskol)
+- Notes vault: [Eskolx-labs/Eskolx-Open-Knowledge](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge)
+- Program: [eskolxlabs.org/program](https://eskolxlabs.org/program)
 
 ## Conduct
 

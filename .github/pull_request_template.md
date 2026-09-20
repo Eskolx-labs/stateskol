@@ -1,6 +1,6 @@
 ## Linked vault note
 
-<!-- Link the Eskolx-Open-Knowledge note for this work. PRs without a note link stay draft. -->
+<!-- Link the vault note for this work: https://github.com/Eskolx-labs/Eskolx-Open-Knowledge. PRs without a note link stay draft. -->
 
 - Note:
 - Textbook section (Ross, chapter and pages):
@@ -25,6 +25,6 @@
 
 ## Checklist
 
-- [ ] Pure Python inside `src/stateskol`, reference libraries only in tests and examples
+- [ ] Standard library only in `src/stateskol` and `tests`; reference libraries only in `examples/reference_check.py`
 - [ ] Docstrings state inputs, outputs, support, assumptions, and errors
 - [ ] No secrets (`rg -i "password|api[_-]?key|token|BEGIN.*PRIVATE KEY" .` is clean)
