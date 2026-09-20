@@ -57,6 +57,9 @@ def test_missing_raise():
         apply_missing(to_float_list([1, None]), "raise")
 
 
+# ----- Robel: basics and frequencies -----
+
+
 def test_basics_hand_checked():
     data = [4, 8, 6, 5, 3, 7]
     assert count(data) == 6
@@ -68,6 +71,11 @@ def test_basics_hand_checked():
 def test_basics_empty_fails():
     with pytest.raises(ValueError):
         min_([])
+
+
+@pytest.mark.skip(reason="Robel implements frequency_table in week 1")
+def test_frequency_counts_match_hand_count():
+    pass
 
 
 # ----- Philimon: center -----
@@ -88,32 +96,27 @@ def test_mode_ties():
     pass
 
 
-# ----- Robel: spread -----
+# ----- Kaleb: spread -----
 
 
-@pytest.mark.skip(reason="Robel implements spread in week 1")
+@pytest.mark.skip(reason="Kaleb implements spread in week 1")
 def test_quantile_hand_checked():
     pass
 
 
-@pytest.mark.skip(reason="Robel implements spread in week 1")
+@pytest.mark.skip(reason="Kaleb implements spread in week 1")
 def test_variance_sample_denominator():
     pass
 
 
-@pytest.mark.skip(reason="Robel implements spread in week 1")
+@pytest.mark.skip(reason="Kaleb implements spread in week 1")
 def test_constant_values_zero_spread():
     pass
 
 
-# ----- Yoseph: tables -----
+# ----- Yoseph: histograms -----
 
 
-@pytest.mark.skip(reason="Yoseph implements tables in week 1")
-def test_frequency_counts_match_hand_count():
-    pass
-
-
-@pytest.mark.skip(reason="Yoseph implements tables in week 1")
+@pytest.mark.skip(reason="Yoseph implements histogram_counts in week 1")
 def test_histogram_bins_cover_range():
     pass

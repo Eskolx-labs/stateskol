@@ -2,10 +2,10 @@
 
 One module for the whole week. Ownership is by function block:
 
-- Kaleb: contract, missing policy, count, min, max, range
-- Philimon: mean, median, mode
-- Robel: quantile, iqr, variance, std
-- Yoseph: frequency_table, histogram_counts
+- Kaleb: contract, missing policy, quantile, iqr, variance, std
+- Philimon: mean, median, mode, plus the Ross exercise solutions
+- Robel: count, min, max, range, frequency_table, boundary pack
+- Yoseph: histogram_counts and the bin rule
 - Yonas: reference checks and the demo script, plus release notes
 
 Blocks are marked below. Stay inside yours.
@@ -81,37 +81,44 @@ def apply_missing(values: list, policy: str = "drop") -> tuple:
     return clean, dropped
 
 
-# ----- Kaleb: basic summaries -----
+# ----- Robel: basic summaries and frequencies -----
 
 
 def count(values, policy: str = "drop") -> int:
-    """Number of clean values after missing handling."""
+    """Number of clean values after missing handling. Owner: Robel."""
     clean, _ = apply_missing(to_float_list(values), policy)
     return len(clean)
 
 
 def min_(values, policy: str = "drop") -> float:
-    """Smallest clean value. Raises ValueError on empty input."""
+    """Smallest clean value. Raises ValueError on empty input. Owner: Robel."""
     clean, _ = apply_missing(to_float_list(values), policy)
     require_nonempty(clean)
     return min(clean)
 
 
 def max_(values, policy: str = "drop") -> float:
-    """Largest clean value. Raises ValueError on empty input."""
+    """Largest clean value. Raises ValueError on empty input. Owner: Robel."""
     clean, _ = apply_missing(to_float_list(values), policy)
     require_nonempty(clean)
     return max(clean)
 
 
 def data_range(values, policy: str = "drop") -> float:
-    """Max minus min. Zero for a single value, error for no values."""
+    """Max minus min. Zero for a single value, error for none. Owner: Robel."""
     clean, _ = apply_missing(to_float_list(values), policy)
     require_nonempty(clean)
     return max(clean) - min(clean)
 
 
+def frequency_table(values, policy: str = "drop") -> dict:
+    """Value to count mapping. Owner: Robel."""
+    raise NotImplementedError("Robel implements frequency_table in week 1")
+
+
 # ----- Philimon: center -----
+# Philimon also solves every Ross Ch.2 exercise with these functions. The
+# solutions live in his vault note, linked from his PR.
 
 
 def mean(values, policy: str = "drop") -> float:
@@ -129,39 +136,35 @@ def mode(values, policy: str = "drop") -> list:
     raise NotImplementedError("Philimon implements mode in week 1")
 
 
-# ----- Robel: spread -----
+# ----- Kaleb: spread -----
 # Variance uses the sample denominator n minus 1. The quantile method goes
-# in the docstring once Robel picks it, so the reference check can match it.
+# in the docstring once Kaleb picks it, so the reference check can match it.
+# Kaleb also shows naive versus stable variance on real data (Welford).
 
 
 def quantile(values, q: float, policy: str = "drop") -> float:
-    """q-th quantile by linear interpolation. Owner: Robel."""
-    raise NotImplementedError("Robel implements quantile in week 1")
+    """q-th quantile by linear interpolation. Owner: Kaleb."""
+    raise NotImplementedError("Kaleb implements quantile in week 1")
 
 
 def iqr(values, policy: str = "drop") -> float:
-    """Interquartile range. Owner: Robel."""
-    raise NotImplementedError("Robel implements iqr in week 1")
+    """Interquartile range. Owner: Kaleb."""
+    raise NotImplementedError("Kaleb implements iqr in week 1")
 
 
 def variance(values, policy: str = "drop") -> float:
-    """Sample variance, denominator n minus 1. Owner: Robel."""
-    raise NotImplementedError("Robel implements sample variance in week 1")
+    """Sample variance, denominator n minus 1. Owner: Kaleb."""
+    raise NotImplementedError("Kaleb implements sample variance in week 1")
 
 
 def std(values, policy: str = "drop") -> float:
-    """Sample standard deviation. Owner: Robel."""
-    raise NotImplementedError("Robel implements sample std in week 1")
+    """Sample standard deviation. Owner: Kaleb."""
+    raise NotImplementedError("Kaleb implements sample std in week 1")
 
 
-# ----- Yoseph: tables -----
-# The bin rule is part of the deliverable: Yoseph states it, documents it,
-# and pins it with tests. Callers who want another rule pass explicit edges.
-
-
-def frequency_table(values, policy: str = "drop") -> dict:
-    """Value to count mapping. Owner: Yoseph."""
-    raise NotImplementedError("Yoseph implements frequency_table in week 1")
+# ----- Yoseph: histograms -----
+# The bin rule is the deliverable: Yoseph states it, documents it, and pins
+# it with tests. Callers who want another rule pass explicit edges.
 
 
 def histogram_counts(values, bins=10, policy: str = "drop") -> tuple:
