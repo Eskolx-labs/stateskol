@@ -40,7 +40,7 @@ git fetch upstream
 git checkout -b kaleb/basics-count-min-max upstream/main
 ```
 
-Branch names start with your first name, for example `kaleb/spread-stable-variance`, `philimon/center-exercises`, `yoseph/histogram-bins`, `robel/basics-boundaries`, `yonas/reference-checks`. All code lands in `src/stateskol/descriptive.py`, so stay inside your marked function block and never edit another owner's block. If you need a change there, leave a review comment on their PR instead.
+Branch names start with your first name, for example `kaleb/stable-variance`, `philimon/center-exercises`, `yoseph/histogram-bins`, `robel/basics-boundaries`, `yonas/quantiles-iqr`. All code lands in `src/stateskol/descriptive.py`, so build only your own functions and never edit another owner's functions. If you need a change there, leave a review comment on their PR instead. Tests start empty. Each owner writes their own section in `tests/test_descriptive.py` as they go.
 
 Commit with plain messages:
 

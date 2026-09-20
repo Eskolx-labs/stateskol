@@ -19,7 +19,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e . --no-deps
       - run: pip install pytest
-      - run: python -m pytest
+      # Exit 5 means "no tests ran yet", which is fine on an empty seed.
+      # Owners add real tests in their PRs, and from then on only 0 passes.
+      - run: python -m pytest; code=$?; if [ $code -eq 0 ] || [ $code -eq 5 ]; then exit 0; else exit $code; fi
       - run: python examples/clean_env_demo.py
 
   reference:
