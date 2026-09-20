@@ -1,12 +1,10 @@
 # Stateskol
 
-Descriptive statistics in pure Python, rebuilt from scratch.
+Statistical and Machine Learning packages in pure Python, rebuilt from scratch.
 
-Stateskol is the code side of the Eskolx Labs program. We read Ross, Introduction to Probability and Statistics for Engineers and Scientists, turn what we read into small tested functions, and prove each one by hand and against a trusted library. Pure Python with no black boxes: the package and the test suite run on the standard library alone. Numpy, pandas, scipy, and statsmodels appear only in `examples/reference_check.py` and in the vault notes, as the reference we check against, never as something our code needs.
+Stateskol is the code side of the Eskolx Labs program. We read Ross, Introduction to Probability and Statistics for Engineers and Scientists, turn what we read into small tested functions, and prove each one by hand and against a trusted library. Pure Python with no black boxes: the package and the test suite run on the standard library alone. Numpy, pandas, scipy, and statsmodels appear mostly only in `examples/reference_check.py` and in the vault notes, as the reference we check against, never as something our code needs.
 
 This repo holds the package. Notes and diagrams live in the public vault, [Eskolx-labs/Eskolx-Open-Knowledge](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge). Every code PR links to a vault note.
-
-The person by person plan for the current week sits in the week brief PDF shared with the team. Read it before you touch code.
 
 ## Layout
 
