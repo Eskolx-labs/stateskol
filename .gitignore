@@ -10,3 +10,5 @@ build/
 .coverage
 htmlcov/
 .DS_Store
+*.pdf
+.vscode/
