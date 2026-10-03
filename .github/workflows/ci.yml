@@ -22,16 +22,9 @@ jobs:
       - run: pip install -e ".[dev]"
       - name: Package compiles
         run: python -m compileall -q src
-      - name: Tests
-        run: |
-          set +e
-          python -m pytest -q
-          code=$?
-          # Exit 5 means "no tests collected yet", which is fine on an empty seed.
-          if [ "$code" -eq 0 ] || [ "$code" -eq 5 ]; then exit 0; fi
-          exit "$code"
       - name: Clean-environment examples
-        # Every *_demo*.py must run with nothing but the package installed.
+        # Every *_demo*.py must run with the package and stdlib only, so run
+        # these before any reference libraries are installed.
         run: |
           ran=0
           while IFS= read -r -d '' f; do
@@ -40,6 +33,16 @@ jobs:
             python "$f"
           done < <(find examples -maxdepth 1 -type f -name '*demo*.py' -print0 | sort -z)
           [ "$ran" -eq 1 ] || echo "no *_demo*.py examples yet"
+      - name: Install reference libraries for tests
+        run: pip install -e ".[reference]"
+      - name: Tests
+        run: |
+          set +e
+          python -m pytest -q
+          code=$?
+          # Exit 5 means "no tests collected yet", which is fine on an empty seed.
+          if [ "$code" -eq 0 ] || [ "$code" -eq 5 ]; then exit 0; fi
+          exit "$code"
 
   reference:
     runs-on: ubuntu-latest

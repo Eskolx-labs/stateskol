@@ -31,7 +31,7 @@ Every code PR links its vault note.
 
    ```bash
    python -m venv .venv && source .venv/bin/activate
-   pip install -e ".[dev]"
+   pip install -e ".[dev,reference]"
    python -m pytest
    ```
 
@@ -44,9 +44,9 @@ git fetch upstream
 git checkout -b your-name/short-topic upstream/main
 ```
 
-One branch per piece of work. Keep the package and its tests on the standard
-library. Reference libraries belong only in the reference examples, never in
-the package or its tests.
+One branch per piece of work. Keep the package on the standard library.
+Reference libraries may be used in the tests and in the reference examples,
+but never in the package itself.
 
 Commit with plain messages:
 

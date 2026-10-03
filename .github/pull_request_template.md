@@ -24,5 +24,5 @@
 
 ## Checklist
 
-- [ ] Standard library only in the package and tests; reference libraries only in the reference examples
+- [ ] Standard library only in the package; reference libraries are allowed in tests and reference examples
 - [ ] No secrets (`rg -i "password|api[_-]?key|token|BEGIN.*PRIVATE KEY" .` is clean)
