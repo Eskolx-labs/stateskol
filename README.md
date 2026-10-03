@@ -4,7 +4,9 @@ Statistical and Machine Learning packages in pure Python, rebuilt from scratch.
 
 Stateskol is the code side of the Eskolx Labs program: we read the sources,
 turn the method into small tested functions, and prove each one by hand and
-against a trusted library. Notes and diagrams live in the public vault,
+against a trusted library. The package and its test suite run on the standard
+library alone; reference libraries are used only in the reference examples.
+Notes and diagrams live in the public vault,
 [Eskolx-labs/Eskolx-Open-Knowledge](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge).
 Every code PR links its vault note.
 
