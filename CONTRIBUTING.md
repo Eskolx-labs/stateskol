@@ -1,99 +1,101 @@
 # Contributing to stateskol
 
-Same rules as the open vault. Main is protected and only the merge holders merge to it. Everyone else forks and opens pull requests.
+Main is protected. Only the merge holders merge to it. Everyone else forks and
+opens a pull request. Merge holders: Natnael Getahun and Barkilign Mulatu.
 
-Merge holders: Natnael Getahun and Barkilign Mulatu. Nobody else merges, including week leads and reviewers. An approval from a reviewer is a green light for a merge holder, not a merge.
+Code and the documentation that ships with it go to this repository. Notes,
+diagrams, and explanations go to the open vault,
+[Eskolx-labs/Eskolx-Open-Knowledge](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge).
+Every code PR links its vault note.
 
-## First setup
+## Setup
 
-1. Fork `Eskolx-labs/stateskol` on GitHub. Use the Fork button, you do not need write access to this repo.
-2. Clone your fork:
+1. Fork `Eskolx-labs/stateskol` on GitHub. You do not need write access.
+2. Clone your fork and point it upstream:
 
-```bash
-git clone https://github.com/<your-username>/stateskol.git
-cd stateskol
-git remote add upstream https://github.com/Eskolx-labs/stateskol.git
-```
+   ```bash
+   git clone https://github.com/<your-username>/stateskol.git
+   cd stateskol
+   git remote add upstream https://github.com/Eskolx-labs/stateskol.git
+   ```
 
-3. Check your identity. This repo is public and everything lands in history, so use the noreply address:
+3. Use the noreply address. This repository is public and everything lands in
+   history:
 
-```bash
-git config user.name "Your Name"
-git config user.email "your-github-username@users.noreply.github.com"
-```
+   ```bash
+   git config user.name "Your Name"
+   git config user.email "your-github-username@users.noreply.github.com"
+   ```
 
-4. Set up Python. The package needs nothing but the standard library:
+4. Set up Python:
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e . --no-deps
-pip install pytest
-python -m pytest
-```
+   ```bash
+   python -m venv .venv && source .venv/bin/activate
+   pip install -e ".[dev]"
+   python -m pytest
+   ```
 
 ## Branch and work
 
-One branch per piece of work, branched from an updated main:
+Branch from an updated main:
 
 ```bash
 git fetch upstream
-git checkout -b kaleb/basics-count-min-max upstream/main
+git checkout -b your-name/short-topic upstream/main
 ```
 
-Branch names start with your first name, for example `kaleb/stable-variance`, `philimon/center-exercises`, `yoseph/histogram-bins`, `robel/basics-boundaries`, `yonas/quantiles-iqr`. All code lands in `src/stateskol/descriptive.py`, so build only your own functions and never edit another owner's functions. If you need a change there, leave a review comment on their PR instead. Tests start empty. Each owner writes their own section in `tests/test_descriptive.py` as they go.
+One branch per piece of work. Keep the package and its tests on the standard
+library. Reference libraries belong only in the reference examples, never in
+the package or its tests.
 
 Commit with plain messages:
 
 ```text
-feat: add count min max range with input contract
-test: hand checked variance cases from Ross 2.3
-docs: note link and examples for median
+feat: add ...
+test: ...
+docs: ...
 ```
 
-## Push and open a PR
+## The quality bar
 
-```bash
-git push -u origin kaleb/basics-count-min-max
-```
+A finished PR holds:
 
-Open the pull request against `Eskolx-labs/stateskol` main, not against your fork main. Fill in the PR template. A draft PR is fine from Thursday on, but it must already contain real work, not an empty skeleton.
-
-Never push to upstream main. If GitHub refuses, that is the protection working. Do not ask for write access, the fork path is the workflow.
-
-## What a finished PR holds
-
-Same bar as the program page. Each feature PR holds all seven:
-
-1. Inputs, outputs, parameterization, support, assumptions, error report, and examples, written in the docstring.
-2. A vault note in Eskolx-Open-Knowledge linked to the textbook section, plus a tldraw diagram drawn with the tldraw Obsidian plugin, plus the deeper source if you used one. Link the note from the PR.
-3. Hand worked results, usual cases, boundary cases, and tests.
-4. A controlled comparison against a trusted library (numpy, pandas, scipy, or statsmodels) with tolerance stated.
-5. Review by somebody other than the author.
-6. Proof you reviewed at least two other PRs that week.
-7. One documentation example that runs in a clean environment (`python examples/clean_env_demo.py` must pass on a fresh clone).
+1. A docstring that states inputs, outputs, parameterization, assumptions, the
+   missing-value rule, errors, and examples.
+2. A linked vault note, plus a tldraw diagram where one helps.
+3. Hand-worked results, usual cases, boundary cases, and tests.
+4. A controlled comparison against a trusted reference, with the tolerance
+   stated.
+5. A documentation example that runs in a clean environment.
+6. A review from someone other than the author.
 
 ## Notes and diagrams
 
-Notes live in the vault, not here: [Eskolx-labs/Eskolx-Open-Knowledge](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge). Create them from a template (Concept for ideas, Research for small studies), fill the properties (`type`, `status`, `author`, `created`, `updated`, `tags`, `publish-status`), and link the note to the textbook section, the papers you read, and the sibling notes it relates to. A note that links to nothing is a dead end, link it up. New to the vault workflow? Start at [its contributing guide](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge/blob/main/CONTRIBUTING.md).
+Notes live in the vault, not here:
 
-Most notes carry a tldraw diagram. Draw the concept or the flow, save the scene under `90 Attachments/animations/` in the vault, and embed it in the note. Diagrams must open on a fresh clone with no local setup. How to draw one: [the vault tldraw guide](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge/blob/main/docs/tldraw.md).
+- Create them from a template and fill the properties (`type`, `status`,
+  `author`, `created`, `updated`, `tags`, `publish-status`).
+- Link the note to the sources and the sibling notes it relates to.
+- Most notes carry a tldraw diagram, saved under `90 Attachments/animations/`
+  and embedded in the note. It must open on a fresh clone with no local setup.
+
+New to the vault? Start at its contributing guide.
 
 ## Reviewing
 
-The PR is the review. When you review, check correctness first, then clarity:
+The PR is the review. Check correctness first, then clarity:
 
-1. Does the math match the book, by hand, on a small dataset you can verify?
-2. Do boundary cases behave: empty input, single value, constant values, tied values, invalid values?
+1. Does the math match the source, by hand, on a small dataset you can verify?
+2. Do the boundary cases behave?
 3. Does the reference comparison run and pass with a stated tolerance?
 4. Does the linked vault note stand alone for someone who was not in the room?
 5. Is there a diagram where one would help?
-6. Is the code standard library only inside `src/stateskol` and `tests`, with numpy and friends confined to `examples/reference_check.py`?
 
-Approve only when all six hold. Leave a comment naming what you checked by hand.
+Approve only when all of it holds. Leave a comment naming what you checked.
 
 ## Before you push
 
-Search for secrets first. This repo is public:
+Search for secrets first. This repository is public:
 
 ```bash
 rg -i "password|api[_-]?key|token|BEGIN.*PRIVATE KEY" .
@@ -101,12 +103,6 @@ rg -i "password|api[_-]?key|token|BEGIN.*PRIVATE KEY" .
 
 No passwords, keys, tokens, or private keys in any file, ever.
 
-## Links
-
-- Code: [Eskolx-labs/stateskol](https://github.com/Eskolx-labs/stateskol)
-- Notes vault: [Eskolx-labs/Eskolx-Open-Knowledge](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge)
-- Program: [eskolxlabs.org/program](https://eskolxlabs.org/program)
-
 ## Conduct
 
-Be direct and kind. Critique the work, not the person. Notes are written by learners, not experts, and that is the point.
+Be direct and kind. Critique the work, not the person.

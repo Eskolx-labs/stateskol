@@ -7,6 +7,8 @@ on:
     branches: [main]
 
 jobs:
+  # The required status checks. Keep the job id and the matrix unchanged:
+  # branch protection expects "test (3.10)", "test (3.11)", "test (3.12)".
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -17,12 +19,27 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e . --no-deps
-      - run: pip install pytest
-      # Exit 5 means "no tests ran yet", which is fine on an empty seed.
-      # Owners add real tests in their PRs, and from then on only 0 passes.
-      - run: python -m pytest; code=$?; if [ $code -eq 0 ] || [ $code -eq 5 ]; then exit 0; else exit $code; fi
-      - run: python examples/clean_env_demo.py
+      - run: pip install -e ".[dev]"
+      - name: Package compiles
+        run: python -m compileall -q src
+      - name: Tests
+        run: |
+          set +e
+          python -m pytest -q
+          code=$?
+          # Exit 5 means "no tests collected yet", which is fine on an empty seed.
+          if [ "$code" -eq 0 ] || [ "$code" -eq 5 ]; then exit 0; fi
+          exit "$code"
+      - name: Clean-environment examples
+        # Every *_demo*.py must run with nothing but the package installed.
+        run: |
+          ran=0
+          while IFS= read -r -d '' f; do
+            ran=1
+            echo "== python \"$f\""
+            python "$f"
+          done < <(find examples -maxdepth 1 -type f -name '*demo*.py' -print0 | sort -z)
+          [ "$ran" -eq 1 ] || echo "no *_demo*.py examples yet"
 
   reference:
     runs-on: ubuntu-latest
@@ -31,6 +48,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -e . --no-deps
-      - run: pip install numpy
-      - run: python examples/reference_check.py
+      - run: pip install -e ".[reference]"
+      - name: Reference checks
+        # Every *reference*.py compares our result against a reference library.
+        # Add new reference libraries to the "reference" extra in pyproject.toml.
+        run: |
+          ran=0
+          while IFS= read -r -d '' f; do
+            ran=1
+            echo "== python \"$f\""
+            python "$f"
+          done < <(find examples -maxdepth 1 -type f -name '*reference*.py' -print0 | sort -z)
+          [ "$ran" -eq 1 ] || echo "no *reference*.py examples yet"

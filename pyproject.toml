@@ -5,13 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "stateskol"
 version = "0.1.0"
-description = "Descriptive statistics in pure Python, rebuilt from scratch"
+description = "Statistical and Machine Learning packages in pure Python, rebuilt from scratch"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+reference = ["numpy"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
