@@ -7,8 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  # The required status checks. Keep the job id and the matrix unchanged:
-  # branch protection expects "test (3.10)", "test (3.11)", "test (3.12)".
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -23,6 +21,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - run: pip install -e ".[dev]"
       - name: Package compiles
         run: python -m compileall -q src
@@ -55,6 +55,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - run: pip install -e ".[reference]"
       - name: Reference checks
         # Every *reference*.py compares our result against a reference library.
@@ -67,3 +69,22 @@ jobs:
             python "$f"
           done < <(find examples -maxdepth 1 -type f -name '*reference*.py' -print0 | sort -z)
           [ "$ran" -eq 1 ] || echo "no *reference*.py examples yet"
+      - name: Note examples CI does not run
+        # Advisory only, never fails the build: surface examples whose names
+        # keep them out of both discovery patterns.
+        run: |
+          for f in examples/*.py; do
+            [ -e "$f" ] || continue
+            case "$f" in
+              *demo*.py|*reference*.py) ;;
+              *) echo "::warning file=$f::matches neither *demo*.py nor *reference*.py, so CI never runs it" ;;
+            esac
+          done
+
+  # Single stable required gate. Branch protection requires only this job, so
+  # the Python matrix and job layout can change without touching repo settings.
+  ci:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "required checks passed"
