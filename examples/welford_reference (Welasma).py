@@ -2,7 +2,7 @@
 Compare welford() against numpy on several datasets.
 
 Run from the repo root:
-    python "examples\welford_reference (welasma).py"
+    python "examples/welford_reference (Welasma).py"
 """
 
 import importlib.util
@@ -13,7 +13,7 @@ import numpy as np
 
 _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parent
-_WELFORD_FILE = _ROOT / "src" / "stateskol" / "welford (welasma).py"
+_WELFORD_FILE = _ROOT / "src" / "stateskol" / "welford (Welasma).py"
 
 _spec = importlib.util.spec_from_file_location("welford_module", _WELFORD_FILE)
 _welford_module = importlib.util.module_from_spec(_spec)
