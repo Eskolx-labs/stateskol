@@ -10,10 +10,10 @@ import pytest
 
 
 # Path to the source file, matching the real layout on disk:
-#   stateskol-welford\src\stateskol\welford (welasma).py
+#   stateskol-welford\src\stateskol\welford (Welasma).py
 _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parent
-_WELFORD_FILE = _ROOT / "src" / "stateskol" / "welford (welasma).py"
+_WELFORD_FILE = _ROOT / "src" / "stateskol" / "welford (Welasma).py"
 
 if not _WELFORD_FILE.is_file():
     raise FileNotFoundError(f"Cannot find welford file at: {_WELFORD_FILE}")
