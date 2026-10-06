@@ -116,3 +116,24 @@ def test_large_offset_stability():
     data = [1e9 + 4, 1e9 + 7, 1e9 + 13, 1e9 + 16]
     r = welford(data)
     assert r.variance == pytest.approx(30.0, rel=1e-9)
+
+
+# --- input contract: non-iterables, text and huge integers -------------------
+@pytest.mark.parametrize("bad", [123, 4.5, None])
+def test_non_iterable_raises_type_error(bad):
+    with pytest.raises(TypeError):
+        welford(bad)
+
+
+@pytest.mark.parametrize("bad", ["123", b"12", bytearray(b"12")])
+def test_text_and_bytes_raise_type_error(bad):
+    # Iterating bytes yields ints, so without this check b"12" would be
+    # silently read as the numbers 49 and 50.
+    with pytest.raises(TypeError):
+        welford(bad)
+
+
+def test_huge_integer_raises_value_error():
+    # math.isinf(10**400) raises OverflowError; the contract says ValueError.
+    with pytest.raises(ValueError):
+        welford([1, 10**400, 3])
