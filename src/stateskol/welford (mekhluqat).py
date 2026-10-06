@@ -45,9 +45,11 @@ def welford(data):
         Constant values: variance and std are 0.0.
 
     Errors
-        TypeError: a value is a ``str``, a ``bool`` or any other
+        TypeError: ``data`` is not iterable, or is a ``str``, ``bytes`` or
+            ``bytearray``; or a value is a ``str``, a ``bool`` or any other
             non-numeric type.
-        ValueError: a value is ``inf`` or ``-inf``.
+        ValueError: a value is ``inf`` or ``-inf``, or an integer too large
+            to convert to a float.
 
     Examples
         >>> welford([2, 4, 6, 8])
@@ -63,18 +65,31 @@ def welford(data):
             ...
         TypeError: invalid value: 'a'
     """
+    if isinstance(data, (str, bytes, bytearray)):
+        raise TypeError("data must be an iterable of numbers, not str/bytes")
+    try:
+        iterator = iter(data)
+    except TypeError:
+        raise TypeError(
+            f"data must be an iterable of numbers, got {type(data).__name__}"
+        ) from None
+
     n = 0
     mean = 0.0
     m2 = 0.0
     dropped = 0
 
-    for x in data:
+    for x in iterator:
         if x is None or (isinstance(x, float) and math.isnan(x)):
             dropped += 1
             continue
         if isinstance(x, bool) or not isinstance(x, (int, float)):
             raise TypeError(f"invalid value: {x!r}")
-        if math.isinf(x):
+        try:
+            infinite = math.isinf(x)
+        except OverflowError:
+            raise ValueError("integer too large to convert to a float") from None
+        if infinite:
             raise ValueError(f"infinite value: {x!r}")
 
         n += 1
