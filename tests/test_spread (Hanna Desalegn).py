@@ -214,3 +214,12 @@ def test_large_mean_is_stable():
     assert naive_variance(data) != pytest.approx(30)  # naive loses every digit here
     assert sp.sample_variance(data) == 30.0
     assert sp.iqr(data) == sp.iqr([4, 7, 13, 16])
+    
+def test_quantile_near_integer_boundary():
+    data = list(range(1, 11))
+
+    # Exact decimal boundary: average the 3rd and 4th values.
+    assert sp.quantile(data, 0.3) == 3.5
+
+    # Slightly above the boundary: select the 4th value.
+    assert sp.quantile(data, 0.30000000001) == 4.0
