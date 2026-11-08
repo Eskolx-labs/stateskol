@@ -40,8 +40,15 @@ assert c == np.histogram(d, bins=e)[0].tolist()
 e, c = histogram_counts(d)
 assert c == np.histogram(d, bins=e)[0].tolist()
 print("histogram_counts matches numpy, edges:", e, "counts:", c)
-from scipy import stats
 from stateskol.descriptive import mode
-for d in ([1, 2, 2, 3], [4, 4, 4], [5, 1, 1, 5, 9]):
-    assert mode(d)[0] == stats.mode(d, keepdims=False).mode
-print("mode matches scipy (first of the tied winners)")
+
+cases = [
+    ([1, 2, 2, 3], {2}),
+    ([4, 4, 4], {4}),
+    ([5, 1, 1, 5, 9], {1, 5}),
+]
+
+for data, expected in cases:
+    assert set(mode(data)) == expected
+
+print("mode matches expected results, including tied modes")
