@@ -9,6 +9,7 @@ tests and reference examples may use reference libraries. Notes and diagrams
 live in the public vault,
 [Eskolx-labs/Eskolx-Open-Knowledge](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge).
 Every code PR links its vault note.
+o
 
 ## Quick start
 
@@ -36,7 +37,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - Notes vault: [Eskolx-labs/Eskolx-Open-Knowledge](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge)
 - Program: [eskolxlabs.org/program](https://eskolxlabs.org/program)
-
+- tldraw Diagram:** [Obsidian Link](obsidian://open?vault=Eskolx-Open-Knowledge&file=90%20Attachments%2Fwelasma%20counting-boundary-pack
+- 
 ## License
 
 MIT. See [LICENSE](LICENSE).
