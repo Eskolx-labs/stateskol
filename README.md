@@ -37,7 +37,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - Notes vault: [Eskolx-labs/Eskolx-Open-Knowledge](https://github.com/Eskolx-labs/Eskolx-Open-Knowledge)
 - Program: [eskolxlabs.org/program](https://eskolxlabs.org/program)
-- tldraw Diagram:** [Obsidian Link]obsidian://open?vault=Eskolx-Open-Knowledge&file=90%20Attachments%2Fwelasma%20counting-boundary-pack
+- tldraw Diagram:** [Obsidian Link] obsidian://open?vault=Eskolx-Open-Knowledge&file=90%20Attachments%2Fwelasma%20counting-boundary-pack
 - 
 ## License
 
