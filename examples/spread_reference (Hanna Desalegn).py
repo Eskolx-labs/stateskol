@@ -12,6 +12,10 @@ same rule as Ross 2.3.3. Both pick a data value or average two. On integer
 data they must match exactly. On float data the average of two values can
 differ in the last bit, because numpy writes it as a + (b - a)/2, so the
 tolerance is 1e-14 relative (1e-12 absolute near zero).
+The one real difference: when n*p is whole in decimal but not in float
+(25 * 0.28 = 7.000000000000001), numpy takes the next value and Ross
+averages. A dense grid below finds every such case and checks that it is
+exactly this kind, and nothing else.
 """
 
 import math
@@ -73,6 +77,19 @@ for data in datasets:
 big = [1e9 + v for v in [4, 7, 13, 16]]
 assert sp.sample_variance(big) == np.var(big, ddof=1) == 30.0
 
+# dense grid: every p in 0.00..1.00 for n = 1..100
+diffs = 0
+for n in range(1, 101):
+    xs = list(range(1, n + 1))
+    for i in range(101):
+        p = i / 100
+        ours = sp.quantile(xs, p)
+        ref = float(np.quantile(xs, p, method="averaged_inverted_cdf"))
+        if ours != ref:
+            diffs += 1
+            assert n * i % 100 == 0 and n * p != round(n * p), (n, p, ours, ref)
+
 print(f"{len(datasets)} data sets, {q_checks} quantiles matched")
+print(f"dense grid: {diffs} of 10100 differ from numpy, all where n*p is whole but float rounds it")
 for tol, err in worst.items():
     print(f"worst relative error for variance/std: {err:.2e} (tolerance {tol:g})")

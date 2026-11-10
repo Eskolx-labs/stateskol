@@ -223,3 +223,10 @@ def test_quantile_near_integer_boundary():
 
     # Slightly above the boundary: select the 4th value.
     assert sp.quantile(data, 0.30000000001) == 4.0
+
+def test_quantile_follows_ross_where_float_rounding_misleads_numpy():
+    # 25 * 0.28 is 7 exactly, so Ross averages the 7th and 8th values
+    # numpy gets 7.000000000000001 in float and returns the 8th value
+    data = list(range(1, 26))
+    assert sp.quantile(data, 0.28) == 7.5
+    assert sp.quantile(list(range(1, 51)), 0.56) == 28.5

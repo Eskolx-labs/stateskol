@@ -19,6 +19,7 @@ import math
 import numbers
 from collections import namedtuple
 from collections.abc import Mapping
+from decimal import ROUND_CEILING, Decimal
 
 SpreadResult = namedtuple(
     "SpreadResult",
@@ -126,8 +127,6 @@ def sample_std(data):
 
 def _sorted_quantile(xs, p):
     """Apply Ross 2.3.3 to an already sorted list."""
-    from decimal import Decimal, ROUND_CEILING
-
     n = len(xs)
     k = Decimal(str(p)) * n
 
@@ -151,9 +150,13 @@ def quantile(data, p):
 
     Sort the data. If n*p is not whole, take the value at position ceil(n*p).
     If it is, average the values at positions n*p and n*p + 1 (counting from
-    1). p = 0 gives the min, p = 1 the max. This matches numpy's
-    ``method="averaged_inverted_cdf"`` (Hyndman-Fan type 2), not numpy's
-    default linear method.
+    1). p = 0 gives the min, p = 1 the max. n*p is worked out in decimal,
+    so 25 * 0.28 counts as exactly 7.
+
+    This is numpy's ``method="averaged_inverted_cdf"`` (Hyndman-Fan type 2),
+    not numpy's default linear method, with one difference: numpy works out
+    n*p in float, where 25 * 0.28 = 7.000000000000001, so it takes the 8th
+    value where Ross averages the 7th and 8th. Here we follow Ross.
 
     Inputs:  data - see the module contract.
              p - real number in [0, 1].
