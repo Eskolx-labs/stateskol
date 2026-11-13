@@ -12,7 +12,7 @@ license = { text = "MIT" }
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
-reference = ["numpy"]
+reference = ["numpy", "pandas"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
