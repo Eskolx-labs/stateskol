@@ -29,7 +29,6 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from stateskol.descriptive import count, minimum  # noqa: E402
-from stateskol.errors import EmptyDataError  # noqa: E402
 
 LAMPS = """
 1067 919 1196 785 1126 936 918 1156 920 948 855 1092 1162 1170 929 950
@@ -58,7 +57,8 @@ def compare(name, values):
         try:
             minimum(list(values))
             min_ok = False
-        except EmptyDataError:
+        except ValueError as error:
+            assert type(error).__name__ == "EmptyDataError"
             min_ok = True
         shown = "raises EmptyDataError"
     else:
@@ -133,7 +133,8 @@ def compare_quiet(values):
         try:
             minimum(list(values))
             return False
-        except EmptyDataError:
+        except ValueError as error:
+            assert type(error).__name__ == "EmptyDataError"
             return True
     return minimum(list(values)) == float(s.min()) == float(np.nanmin(s.to_numpy()))
 

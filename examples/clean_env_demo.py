@@ -4,7 +4,6 @@ Run:  python examples/core_a_demo.py
 """
 
 from stateskol.descriptive import count, minimum
-from stateskol.errors import EmptyDataError
 
 readings = [4, None, 2.5, float("nan"), 7]
 
@@ -16,10 +15,10 @@ print("empty count:", count([]))         # 0, an empty file is a finding
 
 try:
     minimum([])
-except EmptyDataError as error:
+except ValueError as error:   # it is an EmptyDataError
     print("empty minimum refused:", error)
 
 try:
     minimum([1, True])                   # True is not a measurement
-except Exception as error:
+except TypeError as error:
     print("bool refused:", type(error).__name__)

@@ -1,8 +1,9 @@
-"""Core A tests: count and minimum.
+"""Core A tests: count and minimum .
 
 Standard library and pytest only. Every expected number is worked by hand.
-Error classes are Maria's errors.py: InvalidTypeError (bool, str, Decimal,
-Fraction), InvalidValueError (inf, abs(n) > 2**53), EmptyDataError.
+Errors are checked by built-in parent class (TypeError / ValueError) and by
+class NAME, so these tests pass the same before and after the Contract lane's
+errors.py replaces Core A's temporary copy.
 """
 
 import math
@@ -12,12 +13,18 @@ from fractions import Fraction
 import pytest
 
 from stateskol.descriptive import count, minimum
-from stateskol.errors import (EmptyDataError, InvalidTypeError,
-                              InvalidValueError)
+BAD_TYPE = TypeError    # bool, str, Decimal, Fraction (InvalidTypeError)
+BAD_VALUE = ValueError  # inf, -inf, abs(n) > 2**53 (InvalidValueError)
+EMPTY = ValueError      # no present values (EmptyDataError)
 
-BAD_TYPE = InvalidTypeError    # bool, str, Decimal, Fraction
-BAD_VALUE = InvalidValueError  # inf, -inf, abs(n) > 2**53
-EMPTY = EmptyDataError         # no present values
+
+def error_name(function, data):
+    """Run function(data), return the NAME of the error it raises."""
+    try:
+        function(data)
+    except Exception as error:
+        return type(error).__name__
+    return None
 
 NAN = float("nan")
 
@@ -196,3 +203,15 @@ def test_large_list():
     data = list(range(100000, 0, -1)) + [None] * 10
     assert count(data) == 100000
     assert minimum(data) == 1.0
+
+
+# ------------------------------------------------- the exact error classes
+def test_exact_error_names():
+    assert error_name(minimum, []) == "EmptyDataError"
+    assert error_name(minimum, [None]) == "EmptyDataError"
+    assert error_name(count, [True]) == "InvalidTypeError"
+    assert error_name(minimum, ["3"]) == "InvalidTypeError"
+    assert error_name(count, [Decimal("1")]) == "InvalidTypeError"
+    assert error_name(count, [float("inf")]) == "InvalidValueError"
+    assert error_name(minimum, [2 ** 53 + 1]) == "InvalidValueError"
+    assert error_name(minimum, [1, 2, 3]) is None

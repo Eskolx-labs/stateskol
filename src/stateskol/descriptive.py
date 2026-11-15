@@ -1,11 +1,53 @@
+"""descriptive.py: Core A only (count, minimum). Self-contained.
+
+"""
 
 import math
 
-from stateskol.errors import (EmptyDataError, InvalidTypeError,
-                              InvalidValueError, MissingDataError)
+
+# --- BEGIN CORE A BLOCK: count, minimum (owner: yeabsira) ---
+
+# ---- TEMPORARY: Core A's own copy of the contract rules ----------------
+# The Contract lane's errors.py and as_numeric are not merged yet, so Core A
+# carries a private version of the same rules and the same error names. When
+# they land: delete this TEMPORARY section, add
+#     from stateskol.errors import EmptyDataError
+# at the top of the file, and in count and minimum replace _present_numbers(...)
+# with as_numeric(...). The tests do not change (see tests/test_descriptive.py).
+class EmptyDataError(ValueError):
+    """No present values remain, so the summary is undefined."""
 
 
-# --- BEGIN CORE A BLOCK: count, minimum (owner: ADD-NAME) ---
+class InvalidTypeError(TypeError):
+    """An input is not an int or float (bool, str, Decimal, ... rejected)."""
+
+
+class InvalidValueError(ValueError):
+    """Right type, unacceptable value (inf, abs(n) > 2**53)."""
+
+
+_LIMIT = 2 ** 53
+
+
+def _present_numbers(data):
+    """Return the present values as a list of floats. None and NaN are
+    dropped. Bad values raise. Reads the data exactly once."""
+    values = []
+    for x in data:
+        if x is None:
+            continue
+        if isinstance(x, bool) or not isinstance(x, (int, float)):
+            raise InvalidTypeError("not an int or float: " + repr(x))
+        if isinstance(x, float) and math.isnan(x):
+            continue
+        if isinstance(x, float) and math.isinf(x):
+            raise InvalidValueError("infinite value is not allowed")
+        if abs(x) > _LIMIT:
+            raise InvalidValueError("abs(value) is above 2**53: " + repr(x))
+        values.append(float(x))
+    return values
+# ---- END TEMPORARY -----------------------------------------------------
+
 def count(data):
     """Count how many present (non-missing) values there are.
 
@@ -37,7 +79,7 @@ def count(data):
 
     Errors
     ------
-    The contract's errors (raised by as_numeric):
+    The contract's errors:
     - InvalidTypeError  : a value is not an int or float (bool, str, Decimal,
       Fraction, ...).
     - InvalidValueError : right type, bad value (inf, -inf, abs(value) > 2**53).
@@ -49,7 +91,7 @@ def count(data):
     >>> count([])
     0
     """
-    values = as_numeric(data)  # drops missing, rejects bad values
+    values = _present_numbers(data)  # drops missing, rejects bad values
     return len(values)
 
 
@@ -100,7 +142,7 @@ def minimum(data):
     >>> minimum([2, 4, 4, 4, 5, 5, 7, 9])
     2.0
     """
-    values = as_numeric(data)
+    values = _present_numbers(data)
     if len(values) == 0:
         raise EmptyDataError("minimum: no present values (empty or all missing)")
 
