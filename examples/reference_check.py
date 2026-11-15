@@ -1,6 +1,7 @@
 """Compare count and minimum (Core A) with numpy and pandas.
 
-numpy and pandas are used ONLY here, as the trusted answer. count and
+numpy and pandas are used ONLY here (pandas is optional: if it is not
+installed, the pandas comparison is skipped and a NOTE is printed), as the trusted answer. count and
 minimum never use them.
 
 Run on its own:  python examples/reference_core_a.py
@@ -25,7 +26,11 @@ import warnings
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
+
+try:
+    import pandas as pd
+except ImportError:          # CI may not install pandas
+    pd = None
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from stateskol.descriptive import count, minimum  # noqa: E402
@@ -49,11 +54,13 @@ LAMPS = """
 
 def compare(name, values):
     mine_count = count(list(values))
-    pd_count = int(pd.Series(values, dtype="float64").count())
     np_count = int(np.sum(~np.isnan(np.array(values, dtype="float64"))))
-    count_ok = mine_count == pd_count == np_count
+    count_ok = mine_count == np_count
+    if pd is not None:
+        pd_count = int(pd.Series(values, dtype="float64").count())
+        count_ok = count_ok and mine_count == pd_count
 
-    if pd_count == 0:
+    if np_count == 0:
         try:
             minimum(list(values))
             min_ok = False
@@ -66,8 +73,10 @@ def compare(name, values):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             np_min = float(np.nanmin(np.array(values, dtype="float64")))
-        pd_min = float(pd.Series(values, dtype="float64").min())
-        min_ok = mine_min == np_min == pd_min
+        min_ok = mine_min == np_min
+        if pd is not None:
+            pd_min = float(pd.Series(values, dtype="float64").min())
+            min_ok = min_ok and mine_min == pd_min
         shown = repr(mine_min)
 
     ok = count_ok and min_ok
@@ -121,13 +130,18 @@ def check_core_a():
     print()
     print(f"3000 random mixed datasets: {different} different from numpy/pandas")
     print("tolerance: 0 (exact equality)")
+    if pd is None:
+        print("NOTE: pandas is not installed here, so only numpy was compared."
+              " Run this where pandas is installed for the full check.")
     return all_ok and different == 0
 
 
 def compare_quiet(values):
     mine_count = count(list(values))
-    s = pd.Series(values, dtype="float64")
-    if mine_count != int(s.count()):
+    arr = np.array(values, dtype="float64")
+    if mine_count != int(np.sum(~np.isnan(arr))):
+        return False
+    if pd is not None and mine_count != int(pd.Series(arr).count()):
         return False
     if mine_count == 0:
         try:
@@ -136,7 +150,10 @@ def compare_quiet(values):
         except ValueError as error:
             assert type(error).__name__ == "EmptyDataError"
             return True
-    return minimum(list(values)) == float(s.min()) == float(np.nanmin(s.to_numpy()))
+    mine = minimum(list(values))
+    if mine != float(np.nanmin(arr)):
+        return False
+    return pd is None or mine == float(pd.Series(arr).min())
 
 
 if __name__ == "__main__":
