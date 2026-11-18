@@ -225,3 +225,79 @@ def count(data, policy="drop"):
         0
     """
     return len(as_numeric(data, policy))
+
+
+# --------------------------------------------------------------------------
+# Numerics lane (Hanna Desalegn). Week 2.
+#
+# The contract above decides which values are data. This block covers what
+# happens to accepted values once arithmetic touches them. Three facts drive it:
+#
+# 1. Above 2**53 a float cannot hold every integer. float(2**53 + 1) is
+#    2**53, so two different measurements become equal. That is why the
+#    contract refuses ints with abs(n) > 2**53. The rule is about converting
+#    an int, not about size: a float such as 1e16 or 1e308 needs no
+#    conversion and is accepted. The bound is also conservative. 2**60 is
+#    exactly representable but is still refused, because one simple bound is
+#    easier to state and test than an exactness check.
+# 2. nan breaks ordering. Python's min([nan, 3, 1]) is nan but
+#    min([3, nan, 1]) is 1, so the answer depends on input order. Missing
+#    values must leave before min and max run, which as_numeric guarantees.
+# 3. Two finite floats can have an infinite difference.
+#    1e308 - (-1e308) is inf, so data_range must check its own result.
+#
+# Types: v0.1 accepts int and float, including float subclasses such as
+# numpy.float64, because they convert to float exactly. numpy.int64 and
+# numpy.float32 are not int or float and are refused by the contract.
+# --------------------------------------------------------------------------
+
+def checked_difference(hi, lo):
+    """hi - lo as a float, refusing a result the inputs cannot justify.
+
+    Inputs:      hi, lo  finite floats, already accepted by as_numeric.
+    Outputs:     float, hi - lo. For hi >= lo this is the data range.
+    Assumptions: none. This is an arithmetic guard, not a statistical claim.
+    Missing:     not reached. Callers pass values that already left the policy.
+    Errors:      OverflowError when hi and lo are finite but hi - lo is not,
+                 e.g. 1e308 - (-1e308). ValueError when hi or lo is inf or nan,
+                 since the contract should have stopped those earlier.
+    Example:
+        >>> checked_difference(9.0, 2.0)
+        7.0
+        >>> checked_difference(1e308, -1e308)
+        Traceback (most recent call last):
+            ...
+        OverflowError: range of 1e+308 and -1e+308 overflows a float
+    """
+    hi = float(hi)
+    lo = float(lo)
+    if not (math.isfinite(hi) and math.isfinite(lo)):
+        raise ValueError("checked_difference needs finite inputs, got {!r} and {!r}".format(hi, lo))
+    diff = hi - lo
+    # finite in, infinite out: the float ran out of room
+    if math.isinf(diff):
+        raise OverflowError("range of {!r} and {!r} overflows a float".format(hi, lo))
+    return diff
+
+
+def float_spacing(x):
+    """The gap between x and the next larger float, in the units of x.
+
+    Shows how fine the measurement grid is at a given size. Below 2**53 the
+    gap is at most 1, so every integer fits. At 2**53 it becomes 2.
+
+    Inputs:      x  a finite int or float.
+    Outputs:     float, math.ulp(abs(x)).
+    Assumptions: IEEE 754 double precision, which is what Python float is.
+    Missing:     not handled. Pass a present value.
+    Errors:      ValueError if x is inf or nan.
+    Example:
+        >>> float_spacing(1.0)
+        2.220446049250313e-16
+        >>> float_spacing(2**53)
+        2.0
+    """
+    x = float(x)
+    if not math.isfinite(x):
+        raise ValueError("float_spacing needs a finite value, got {!r}".format(x))
+    return math.ulp(abs(x))
