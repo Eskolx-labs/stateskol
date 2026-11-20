@@ -48,7 +48,7 @@ requests, not here.
 
 import math
 
-from stateskol.errors import ContractError, UnknownPolicyError
+from stateskol.errors import ContractError, EmptyDataError, UnknownPolicyError
 
 DOCSTRING_SHAPE = """Inputs:      what the function takes, including the types it rejects
 Outputs:     one value, its type, and what it means
@@ -225,3 +225,109 @@ def count(data, policy="drop"):
         0
     """
     return len(as_numeric(data, policy))
+
+
+# --------------------------------------------------------------------------
+# Core A (Hanna Desalegn). Week 3: mean, median, mode.
+#
+# Each summary reads the data through as_numeric, so the week 2 contract and
+# missing-value policy apply unchanged. Nothing present after the policy runs
+# means there is no summary to report, so all three raise EmptyDataError.
+# --------------------------------------------------------------------------
+
+def _present(data, policy, name):
+    values = as_numeric(data, policy)
+    if not values:
+        raise EmptyDataError("{} of empty data: no present values after policy={!r}".format(name, policy))
+    return values
+
+
+def mean(data, policy="drop"):
+    """Arithmetic mean: the sum of the present values divided by how many there are.
+
+    Inputs:      data   any iterable accepted by as_numeric. A generator is read once.
+                 policy "drop" (default) or "strict".
+    Outputs:     float, the sample mean (Ross 2.3.1).
+    Algorithm:   math.fsum, an exactly rounded sum, then one division. If the sum
+                 overflows a float (two values near 1e308), each value is divided
+                 by n first, so the mean of finite data stays finite.
+    Assumptions: Unknown. The caller must state the missingness mechanism (MCAR, MAR, MNAR).
+                 The mean is pulled toward outliers: one 48 added to 1 2 2 3 4 4 5 6 7
+                 moves it from 3.78 to 8.2.
+    Missing:     under "drop", None and nan are removed first. Under "strict", the
+                 first one raises ContractError.
+    Errors:      EmptyDataError when no present values remain. ContractError for a
+                 value the contract refuses. UnknownPolicyError for an unknown policy.
+    Example:
+        >>> mean([2, 4, 4, 4, 5, 5, 7, 9])
+        5.0
+        >>> mean([1, None, 3])
+        2.0
+    """
+    values = _present(data, policy, "mean")
+    n = len(values)
+    try:
+        return math.fsum(values) / n
+    except OverflowError:
+        return math.fsum(v / n for v in values)
+
+
+def median(data, policy="drop"):
+    """The middle value of the sorted present values.
+
+    Inputs:      data   any iterable accepted by as_numeric. A generator is read once.
+                 policy "drop" (default) or "strict".
+    Outputs:     float. Odd n: the middle value. Even n: the average of the two middle
+                 values (Ross 2.3.1). This is the quantile at p = 0.5 under type 7,
+                 h = (n - 1)p + 1 (Hyndman and Fan 1996), so median and Q2 always agree.
+    Algorithm:   sort a copy, then index. The two middle values are halved before
+                 adding, so 1e308 and 1.5e308 give 1.25e308 and not inf.
+    Assumptions: Unknown. The caller must state the missingness mechanism (MCAR, MAR, MNAR).
+                 The median ignores how far the tails reach: 1 2 2 3 4 4 5 6 7 and the
+                 same data plus 48 both have median 4.0.
+    Missing:     under "drop", None and nan are removed before sorting, so their
+                 position cannot change the answer. Under "strict", the first raises.
+    Errors:      EmptyDataError when no present values remain. ContractError for a
+                 value the contract refuses. UnknownPolicyError for an unknown policy.
+    Example:
+        >>> median([7, 1, 3])
+        3.0
+        >>> median([2, 4, 4, 4, 5, 5, 7, 9])
+        4.5
+    """
+    xs = sorted(_present(data, policy, "median"))
+    n = len(xs)
+    mid = n // 2
+    if n % 2:
+        return xs[mid]
+    return xs[mid - 1] / 2 + xs[mid] / 2
+
+
+def mode(data, policy="drop"):
+    """Every value that occurs most often, in ascending order.
+
+    Inputs:      data   any iterable accepted by as_numeric. A generator is read once.
+                 policy "drop" (default) or "strict".
+    Outputs:     list[float], every tied value, smallest first. When all values occur
+                 once, every value is a mode and all of them are returned.
+    Algorithm:   count each value in one pass, keep the ones with the highest count.
+                 Values are compared after float conversion, so 2 and 2.0 are one
+                 value, and 0.0 and -0.0 are one value.
+    Assumptions: Unknown. The caller must state the missingness mechanism (MCAR, MAR, MNAR).
+                 Mode is only meaningful when values repeat. On continuous data every
+                 value tends to be unique and the result is the whole sample.
+    Missing:     under "drop", None and nan are removed first, so nan is never a mode.
+                 Under "strict", the first one raises ContractError.
+    Errors:      EmptyDataError when no present values remain. ContractError for a
+                 value the contract refuses. UnknownPolicyError for an unknown policy.
+    Example:
+        >>> mode([1, 2, 2, 3, 4, 4, 5])
+        [2.0, 4.0]
+        >>> mode([5, 3, 5])
+        [5.0]
+    """
+    counts = {}
+    for v in _present(data, policy, "mode"):
+        counts[v] = counts.get(v, 0) + 1
+    top = max(counts.values())
+    return sorted(v for v, c in counts.items() if c == top)
