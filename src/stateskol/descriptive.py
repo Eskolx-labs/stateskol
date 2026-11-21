@@ -4,10 +4,12 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Optional
  
 from .errors import (
+    DomainError,
     EmptyDataError,
     InvalidTypeError,
     InvalidValueError,
     MissingDataError,
+    UnsupportedRuleError
 )
  
  
@@ -426,3 +428,31 @@ def mode(data, policy="drop"):
     return sorted(v for v, c in counts.items() if c == top)
 # ==== WEEK 3 BLOCK: center and spread (end) ====
 
+def quantile(data, p, method="type7", policy="drop"):
+    """Quantile p (0 to 1) using Hyndman & Fan type 7.
+
+    Type 7: position = (n - 1) * p on the sorted values, then interpolate
+    between the two neighbours. Same as numpy, R and Excel PERCENTILE.INC.
+    Any other method raises UnsupportedRuleError.
+    p outside 0 to 1 raises DomainError.
+    """
+    if method != "type7":
+        raise UnsupportedRuleError(
+            f"quantile method {method!r} refused: only 'type7' "
+            "(Hyndman & Fan 1996) is shipped"
+        )
+    if not 0 <= p <= 1:
+        raise DomainError(f"p must be between 0 and 1, got {p!r}")
+    values = sorted(_require_values(as_numeric(data, policy), "quantile"))
+    pos = p * (len(values) - 1)
+    lo = int(pos)
+    frac = pos - lo
+    if frac == 0:
+        return values[lo]
+    return values[lo] + frac * (values[lo + 1] - values[lo])
+
+
+def iqr(data, method="type7", policy="drop"):
+    """Interquartile range: quantile 0.75 minus quantile 0.25."""
+    values = as_numeric(data, policy)
+    return quantile(values, 0.75, method) - quantile(values, 0.25, method)
