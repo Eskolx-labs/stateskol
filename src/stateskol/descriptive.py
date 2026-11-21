@@ -401,6 +401,48 @@ def audit(data: Iterable, policy: str = "drop") -> DataAudit:
     return DataAudit(n_total, len(values), len(missing), tuple(missing), policy,
                      assumption, lo, hi, rng, tuple(sorted(types)), summary)
 # ==== WEEK 2 BLOCK: the data contract (end) ====
+def variance(data, ddof=1, policy="drop"):
+    """Variance by Welford's one-pass method.
+
+    ddof=1 divides by n-1 (sample variance, the default).
+    ddof=0 divides by n (population variance).
+    Welford keeps a running mean and a running sum of squared deviations,
+    so large nearly-equal numbers are never subtracted.
+    """
+    if ddof not in (0, 1):
+        raise DomainError(f"ddof must be 0 or 1, got {ddof!r}")
+    values = _require_values(as_numeric(data, policy), "variance")
+    if len(values) - ddof <= 0:
+        raise DomainError(
+            f"variance with ddof={ddof} needs at least {ddof + 1} value(s), got {len(values)}"
+        )
+    n = 0
+    running_mean = 0.0
+    m2 = 0.0
+    for x in values:
+        n += 1
+        delta = x - running_mean
+        running_mean += delta / n
+        m2 += delta * (x - running_mean)
+    return m2 / (n - ddof)
+
+
+def stdev(data, ddof=1, policy="drop"):
+    """Standard deviation: the square root of variance (same ddof)."""
+    return math.sqrt(variance(data, ddof, policy))
+
+
+def coefficient_variation(data, policy="drop"):
+    """Standard deviation divided by the absolute mean.
+
+    Refuses with DomainError when the mean is zero.
+    """
+    values = as_numeric(data, policy)
+    m = mean(values)
+    if m == 0:
+        raise DomainError("coefficient of variation is undefined when the mean is zero")
+    return stdev(values) / abs(m)
+
 # ==== WEEK 3 BLOCK: center and spread (start) ====
 def mean(data, policy="drop"):
     """Average: add the values, divide by how many there are."""
