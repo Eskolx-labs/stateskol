@@ -334,32 +334,6 @@ def coefficient_variation(data, policy="drop"):
         raise DomainError("coefficient of variation is undefined when the mean is zero")
     return stdev(values) / abs(m)
 
-# ==== WEEK 3 BLOCK: center and spread (start) ====
-def mean(data, policy="drop"):
-    """Average: add the values, divide by how many there are."""
-    values = _require_values(as_numeric(data, policy), "mean")
-    return math.fsum(values) / len(values)
-
-
-def median(data, policy="drop"):
-    """Middle value. With an even count, the average of the two middle values."""
-    values = sorted(_require_values(as_numeric(data, policy), "median"))
-    n = len(values)
-    mid = n // 2
-    if n % 2 == 1:
-        return values[mid]
-    return (values[mid - 1] + values[mid]) / 2
-
-
-def mode(data, policy="drop"):
-    """The most common value(s). If there is a tie, all tied values are returned."""
-    values = _require_values(as_numeric(data, policy), "mode")
-    counts = {}
-    for v in values:
-        counts[v] = counts.get(v, 0) + 1
-    top = max(counts.values())
-    return sorted(v for v, c in counts.items() if c == top)
-# ==== WEEK 3 BLOCK: center and spread (end) ====
 
 def quantile(data, p, method="type7", policy="drop"):
     """Quantile p (0 to 1) using Hyndman & Fan type 7.
@@ -389,3 +363,181 @@ def iqr(data, method="type7", policy="drop"):
     """Interquartile range: quantile 0.75 minus quantile 0.25."""
     values = as_numeric(data, policy)
     return quantile(values, 0.75, method) - quantile(values, 0.25, method)
+# ==== WEEK 3 BLOCK: center and spread (start) ====
+def mean(data, policy="drop"):
+    """Arithmetic mean of the present values.
+
+    Input: an iterable of int or float. Output: a float.
+    Formula: the sum of the values divided by how many there are.
+    Algorithm: math.fsum for the sum (one rounding), then one division.
+    Missing: None and NaN are dropped under policy="drop" (audit() records
+    them); policy="strict" raises MissingDataError.
+    Assumption: dropping is valid under MCAR. Unknown. The caller must state
+    the mechanism.
+    Errors: EmptyDataError if no present values remain; InvalidTypeError and
+    InvalidValueError as as_numeric.
+
+    >>> mean([1, 2, 3, 10])
+    4.0
+    """
+    values = _require_values(as_numeric(data, policy), "mean")
+    return math.fsum(values) / len(values)
+
+
+def median(data, policy="drop"):
+    """Middle value of the sorted present values.
+
+    Input: an iterable of int or float. Output: a float.
+    Formula: odd n gives the middle value; even n gives the average of the
+    two middle values.
+    Algorithm: sort, then index.
+    Missing: as mean. Assumption: as mean.
+    Errors: as mean.
+
+    >>> median([4, 1, 3, 2])
+    2.5
+    """
+    values = sorted(_require_values(as_numeric(data, policy), "median"))
+    n = len(values)
+    mid = n // 2
+    if n % 2 == 1:
+        return values[mid]
+    return (values[mid - 1] + values[mid]) / 2
+
+
+def mode(data, policy="drop"):
+    """Every most-frequent value, sorted. A tie returns all tied values.
+
+    Input: an iterable of int or float. Output: a sorted list of floats.
+    Formula: count each distinct value, keep those with the highest count.
+    Algorithm: one pass with a dict, then sort the winners.
+    Note: if every value is distinct, every value is returned.
+    Missing: as mean. Assumption: as mean.
+    Errors: as mean.
+
+    >>> mode([1, 1, 2, 2, 3])
+    [1.0, 2.0]
+    """
+    values = _require_values(as_numeric(data, policy), "mode")
+    counts = {}
+    for v in values:
+        counts[v] = counts.get(v, 0) + 1
+    top = max(counts.values())
+    return sorted(v for v, c in counts.items() if c == top)
+
+
+def quantile(data, p, method="type7", policy="drop"):
+    """The p-th quantile, by Hyndman & Fan (1996) type 7.
+
+    Input: an iterable of int or float, p from 0 to 1, method="type7".
+    Output: a float.
+    Rule: type 7, position h = (n - 1) * p + 1 in the sorted sample, with
+    linear interpolation between the two neighbours. This is the default in
+    numpy, R and Excel PERCENTILE.INC, so any number can be checked.
+    Algorithm: sort, find the position, interpolate.
+    Missing: as mean. Assumption: as mean.
+    Errors: DomainError if p is outside 0 to 1; UnsupportedRuleError for any
+    method other than "type7"; EmptyDataError as mean.
+
+    >>> quantile([1, 2, 3, 4], 0.25)
+    1.75
+    """
+    if method != "type7":
+        raise UnsupportedRuleError(
+            f"quantile method {method!r} refused: only 'type7' "
+            "(Hyndman & Fan 1996) is shipped"
+        )
+    if not 0 <= p <= 1:
+        raise DomainError(f"p must be between 0 and 1, got {p!r}")
+    values = sorted(_require_values(as_numeric(data, policy), "quantile"))
+    pos = p * (len(values) - 1)
+    lo = int(pos)
+    frac = pos - lo
+    if frac == 0:
+        return values[lo]
+    return values[lo] + frac * (values[lo + 1] - values[lo])
+
+
+def iqr(data, method="type7", policy="drop"):
+    """Interquartile range: quantile 0.75 minus quantile 0.25.
+
+    Input: an iterable of int or float. Output: a float, 0 or more.
+    Rule: Hyndman & Fan (1996) type 7, via quantile().
+    Missing: as mean. Assumption: as mean.
+    Errors: as quantile.
+
+    >>> iqr([1, 2, 3, 4])
+    1.5
+    """
+    values = as_numeric(data, policy)
+    return quantile(values, 0.75, method) - quantile(values, 0.25, method)
+
+
+def variance(data, ddof=1, policy="drop"):
+    """Variance by Welford's one-pass method.
+
+    Input: an iterable of int or float, ddof 1 (default) or 0. Output: a float.
+    Formula: the sum of squared deviations from the mean, divided by n - ddof.
+    ddof=1 is the sample variance (the default); ddof=0 is the population
+    variance.
+    Algorithm: Welford (1962). It keeps a running mean and a running sum of
+    squared deviations, so large nearly-equal numbers are never subtracted
+    (the naive formula returns 0.0 for 1e9 + 1 to 1e9 + 4).
+    Missing: as mean. Assumption: as mean.
+    Errors: DomainError if ddof is not 0 or 1, or too few values remain
+    (ddof=1 needs 2); EmptyDataError as mean.
+
+    >>> variance([2, 4, 6])
+    4.0
+    """
+    if ddof not in (0, 1):
+        raise DomainError(f"ddof must be 0 or 1, got {ddof!r}")
+    values = _require_values(as_numeric(data, policy), "variance")
+    if len(values) - ddof <= 0:
+        raise DomainError(
+            f"variance with ddof={ddof} needs at least {ddof + 1} value(s), got {len(values)}"
+        )
+    n = 0
+    running_mean = 0.0
+    m2 = 0.0
+    for x in values:
+        n += 1
+        delta = x - running_mean
+        running_mean += delta / n
+        m2 += delta * (x - running_mean)
+    return m2 / (n - ddof)
+
+
+def stdev(data, ddof=1, policy="drop"):
+    """Standard deviation: the square root of variance.
+
+    Input and ddof default (1): as variance. Output: a float, 0 or more,
+    in the same units as the data.
+    Algorithm: math.sqrt of the Welford variance.
+    Missing: as mean. Assumption: as mean.
+    Errors: as variance.
+
+    >>> stdev([2, 4, 6])
+    2.0
+    """
+    return math.sqrt(variance(data, ddof, policy))
+
+
+def coefficient_variation(data, policy="drop"):
+    """Standard deviation divided by the absolute mean.
+
+    Input: an iterable of int or float. Output: a float.
+    Formula: stdev (ddof=1) / abs(mean).
+    Algorithm: mean() and stdev() of the same present values.
+    Missing: as mean. Assumption: as mean.
+    Errors: DomainError if the mean is zero; others as variance.
+
+    >>> coefficient_variation([2, 4, 6])
+    0.5
+    """
+    values = as_numeric(data, policy)
+    m = mean(values)
+    if m == 0:
+        raise DomainError("coefficient of variation is undefined when the mean is zero")
+    return stdev(values) / abs(m)
+# ==== WEEK 3 BLOCK: center and spread (end) ====
