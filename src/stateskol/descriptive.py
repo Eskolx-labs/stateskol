@@ -399,4 +399,30 @@ def audit(data: Iterable, policy: str = "drop") -> DataAudit:
     return DataAudit(n_total, len(values), len(missing), tuple(missing), policy,
                      assumption, lo, hi, rng, tuple(sorted(types)), summary)
 # ==== WEEK 2 BLOCK: the data contract (end) ====
+# ==== WEEK 3 BLOCK: center and spread (start) ====
+def mean(data, policy="drop"):
+    """Average: add the values, divide by how many there are."""
+    values = _require_values(as_numeric(data, policy), "mean")
+    return math.fsum(values) / len(values)
+
+
+def median(data, policy="drop"):
+    """Middle value. With an even count, the average of the two middle values."""
+    values = sorted(_require_values(as_numeric(data, policy), "median"))
+    n = len(values)
+    mid = n // 2
+    if n % 2 == 1:
+        return values[mid]
+    return (values[mid - 1] + values[mid]) / 2
+
+
+def mode(data, policy="drop"):
+    """The most common value(s). If there is a tie, all tied values are returned."""
+    values = _require_values(as_numeric(data, policy), "mode")
+    counts = {}
+    for v in values:
+        counts[v] = counts.get(v, 0) + 1
+    top = max(counts.values())
+    return sorted(v for v, c in counts.items() if c == top)
+# ==== WEEK 3 BLOCK: center and spread (end) ====
 

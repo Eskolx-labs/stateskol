@@ -19,3 +19,11 @@ class InvalidValueError(StateskolError, ValueError):
 
 class MissingDataError(StateskolError, ValueError):
     """A missing value was found while policy="strict"."""
+
+
+class DomainError(StateskolError, ValueError):
+    """An argument is outside its allowed range, such as p outside 0 to 1."""
+
+
+class UnsupportedRuleError(StateskolError, ValueError):
+    """A rule or method was asked for that this release does not ship."""
