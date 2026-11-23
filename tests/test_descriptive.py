@@ -123,10 +123,22 @@ class StabilityCaseRangeOverflow(unittest.TestCase):
         self.assertEqual(checked_difference(0.0, -0.0), 0.0)
         self.assertEqual(checked_difference(5e-324, 0.0), 5e-324)  # smallest subnormal
 
-    def test_non_finite_inputs_are_refused(self):
-        # reason: inf or nan here means the contract was skipped
-        for hi, lo in ((INF, 0.0), (0.0, -INF), (NAN, 1.0)):
+    def test_infinite_inputs_are_refused_by_the_contract(self):
+        # reason: inf is a data error everywhere, not only inside as_numeric
+        for hi, lo in ((INF, 0.0), (0.0, -INF)):
+            with self.assertRaises(ContractError):
+                checked_difference(hi, lo)
+
+    def test_nan_inputs_are_refused(self):
+        # reason: nan here means the missing-value policy was skipped
+        for hi, lo in ((NAN, 1.0), (1.0, NAN)):
             with self.assertRaises(ValueError):
+                checked_difference(hi, lo)
+
+    def test_refused_types_match_the_contract(self):
+        # reason: review on #23, a helper must not accept what as_numeric refuses
+        for hi, lo in ((True, 0), (5, False), ("5", "1"), (2**53 + 1, 0)):
+            with self.assertRaises(ContractError):
                 checked_difference(hi, lo)
 
 
@@ -146,8 +158,15 @@ class Types(unittest.TestCase):
 
     def test_float_spacing_refuses_non_finite(self):
         # reason: a spacing at inf or nan has no meaning
-        for bad in (INF, NAN):
-            with self.assertRaises(ValueError):
+        with self.assertRaises(ContractError):
+            float_spacing(INF)
+        with self.assertRaises(ValueError):
+            float_spacing(NAN)
+
+    def test_float_spacing_refuses_what_the_contract_refuses(self):
+        # reason: review on #23, True and "10" used to be converted silently
+        for bad in (True, False, "10", b"10", 2**53 + 1):
+            with self.assertRaises(ContractError):
                 float_spacing(bad)
 
     def test_numpy_types_if_installed(self):

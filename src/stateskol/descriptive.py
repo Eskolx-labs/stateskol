@@ -258,9 +258,12 @@ def checked_difference(hi, lo):
     Outputs:     float, hi - lo. For hi >= lo this is the data range.
     Assumptions: none. This is an arithmetic guard, not a statistical claim.
     Missing:     not reached. Callers pass values that already left the policy.
-    Errors:      OverflowError when hi and lo are finite but hi - lo is not,
-                 e.g. 1e308 - (-1e308). ValueError when hi or lo is inf or nan,
-                 since the contract should have stopped those earlier.
+    Errors:      ContractError when hi or lo breaks the v0.1 contract (bool, str,
+                 inf, abs(n) > 2**53 and the other refused types), the same rule
+                 as_numeric applies. ValueError when hi or lo is nan, since a
+                 missing value should have left through the policy first.
+                 OverflowError when hi and lo are finite but hi - lo is not,
+                 e.g. 1e308 - (-1e308).
     Example:
         >>> checked_difference(9.0, 2.0)
         7.0
@@ -269,10 +272,13 @@ def checked_difference(hi, lo):
             ...
         OverflowError: range of 1e+308 and -1e+308 overflows a float
     """
+    # same accepted types as the contract, so a helper cannot take what as_numeric refuses
+    for v in (hi, lo):
+        _validate(v)
     hi = float(hi)
     lo = float(lo)
-    if not (math.isfinite(hi) and math.isfinite(lo)):
-        raise ValueError("checked_difference needs finite inputs, got {!r} and {!r}".format(hi, lo))
+    if math.isnan(hi) or math.isnan(lo):
+        raise ValueError("checked_difference needs present values, got {!r} and {!r}".format(hi, lo))
     diff = hi - lo
     # finite in, infinite out: the float ran out of room
     if math.isinf(diff):
@@ -286,18 +292,20 @@ def float_spacing(x):
     Shows how fine the measurement grid is at a given size. Below 2**53 the
     gap is at most 1, so every integer fits. At 2**53 it becomes 2.
 
-    Inputs:      x  a finite int or float.
+    Inputs:      x  an int or float the v0.1 contract accepts.
     Outputs:     float, math.ulp(abs(x)).
     Assumptions: IEEE 754 double precision, which is what Python float is.
     Missing:     not handled. Pass a present value.
-    Errors:      ValueError if x is inf or nan.
+    Errors:      ContractError if x breaks the v0.1 contract (bool, str, inf,
+                 abs(n) > 2**53 and the other refused types). ValueError if x is nan.
     Example:
         >>> float_spacing(1.0)
         2.220446049250313e-16
         >>> float_spacing(2**53)
         2.0
     """
+    _validate(x)
     x = float(x)
-    if not math.isfinite(x):
-        raise ValueError("float_spacing needs a finite value, got {!r}".format(x))
+    if math.isnan(x):
+        raise ValueError("float_spacing needs a present value, got nan")
     return math.ulp(abs(x))
