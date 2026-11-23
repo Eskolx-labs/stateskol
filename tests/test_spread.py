@@ -219,6 +219,18 @@ class TestVarianceAndStdev(HandWorked):
     def test_the_default_is_the_sample_variance(self):
         self.assertEqual(variance(TEN), variance(TEN, ddof=1))
 
+    def test_the_hand_value_and_the_package_differ_by_exactly_one_ulp(self):
+        # The exact answer is Fraction(142, 5); the double nearest it prints as
+        # 28.4, and one-pass Welford lands on the double just below it. The gap
+        # is pinned to one ulp so a worse accumulation is a failure, not a
+        # tolerance. The two-pass sum with math.fsum does reach 28.4, which is
+        # the price of streaming, so it is recorded here as the cross-check
+        # rather than shipped as the method.
+        exact = 142 / 5
+        self.assertEqual(variance(TEN), math.nextafter(exact, 0.0))
+        mean = sum(TEN) / len(TEN)
+        self.assertEqual(math.fsum((x - mean) ** 2 for x in TEN) / 9, exact)
+
     def test_the_1e9_case_the_brief_requires(self):
         data = [1e9 + 1, 1e9 + 2, 1e9 + 3, 1e9 + 4]
         # Deviations from 1e9 + 2.5 are -1.5, -0.5, 0.5, 1.5, so m2 = 5 and
