@@ -328,6 +328,54 @@ class TestOnePassPerSummary(unittest.TestCase):
             self.assertEqual(source.iterations, 1, fn.__name__)
 
 
+class TestOneOutlier(HandWorked):
+    """The boundary case the brief's Sunday demonstration is built on.
+
+    NINE is 1 2 2 3 4 4 5 6 7. Adding the single value 48 leaves the median at
+    exactly 4.0, moves the mean from 34/9 = 3.777.. to 82/10 = 8.2, and changes
+    what the spread says about the sample. mean and median are Core A, so the
+    package values here come from quantile(p=0.5); the mean is hand-worked in
+    the comment, not called.
+    """
+
+    NINE = [1, 2, 2, 3, 4, 4, 5, 6, 7]
+    WITH_OUTLIER = [1, 2, 2, 3, 4, 4, 5, 6, 7, 48]
+
+    def test_the_median_does_not_move_at_all(self):
+        # h = (9 - 1) * 0.5 = 4 -> the 5th value, 4.
+        # h = (10 - 1) * 0.5 = 4.5 -> halfway between the 5th and 6th, both 4.
+        self.assertEqual(quantile(self.NINE, 0.5), 4.0)
+        self.assertEqual(quantile(self.WITH_OUTLIER, 0.5), 4.0)
+
+    def test_the_iqr_barely_notices(self):
+        # NINE: Q1 h=2 -> 2, Q3 h=6 -> 5, so 3.
+        # TEN: Q1 h=2.25 -> 2 + 0.25 * (3 - 2) = 2.25,
+        #      Q3 h=6.75 -> 5 + 0.75 * (6 - 5) = 5.75, so 3.5.
+        self.assertEqual(iqr(self.NINE), 3.0)
+        self.assertEqual(iqr(self.WITH_OUTLIER), 3.5)
+
+    def test_the_standard_deviation_is_mostly_the_outlier(self):
+        # NINE: mean 34/9, sum of squared deviations 284/9 = 31.5556,
+        #       variance (284/9)/8 = 3.9444, stdev 1.986062547968831.
+        # WITH_OUTLIER: mean 41/5 = 8.2, sum of squared deviations 8958/5 =
+        #       1791.6, variance (8958/5)/9 = 199.0667, stdev 14.109098719148104.
+        # Both sums were computed exactly with fractions, not by rounding.
+        self.assertClose(stdev(self.NINE), math.sqrt((284 / 9) / 8))
+        self.assertClose(stdev(self.WITH_OUTLIER), math.sqrt((8958 / 5) / 9))
+        self.assertClose(stdev(self.WITH_OUTLIER) / stdev(self.NINE), 7.104055576486068)
+
+    def test_variance_and_stdev_stay_consistent_under_an_outlier(self):
+        self.assertEqual(stdev(self.WITH_OUTLIER), math.sqrt(variance(self.WITH_OUTLIER)))
+
+    def test_an_outlier_at_the_bottom_behaves_the_same_way(self):
+        data = [-48, 1, 2, 2, 3, 4, 4, 5, 6, 7]
+        # Symmetry is not the point; the point is that p=0 and p=1 admit the
+        # outlier exists, which no other summary on this list does.
+        self.assertEqual(quantile(data, 0.0), -48.0)
+        self.assertEqual(quantile(data, 1.0), 7.0)
+        self.assertEqual(quantile(data, 0.5), 3.5)
+
+
 class TestDocstringShape(unittest.TestCase):
     """Week 3 point 1: the rule, the divisor, the algorithm and the assumption."""
 
@@ -343,10 +391,10 @@ class TestDocstringShape(unittest.TestCase):
             self.assertIn("type 7", fn.__doc__)
             self.assertIn("Hyndman & Fan (1996)", fn.__doc__)
 
-    def test_variance_and_stdev_state_the_divisor_and_the_algorithm(self):
-        for fn in (variance, stdev):
-            self.assertIn("ddof", fn.__doc__)
-            self.assertIn("Welford", fn.__doc__)
+    def test_variance_stdev_and_cv_state_the_divisor_and_the_algorithm(self):
+        for fn in (variance, stdev, coefficient_variation):
+            self.assertIn("ddof", fn.__doc__, fn.__name__)
+            self.assertIn("Welford", fn.__doc__, fn.__name__)
 
     def test_every_summary_lists_the_errors_it_raises(self):
         for fn in self.SPREAD:

@@ -497,7 +497,9 @@ def coefficient_variation(data):
     Inputs:  data any iterable the v0.1 contract accepts, consumed once.
     Outputs: float, a ratio and not a percentage. Multiply by 100 to read it
              as one. Comparable across samples on different scales; the
-             standard deviation is not.
+             standard deviation is not. The algorithm is one Welford (1962)
+             pass that returns the count, the mean and m2 together, so the
+             numerator and the denominator cannot come from different samples.
     Assumptions: Unknown. The caller must state the missingness mechanism (MCAR, MAR, MNAR).
              The ratio also assumes the mean is on a scale where zero is
              meaningful, so it is not a statement about a temperature in
