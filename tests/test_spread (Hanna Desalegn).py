@@ -230,3 +230,10 @@ def test_quantile_follows_ross_where_float_rounding_misleads_numpy():
     data = list(range(1, 26))
     assert sp.quantile(data, 0.28) == 7.5
     assert sp.quantile(list(range(1, 51)), 0.56) == 28.5
+
+
+def test_quantile_midpoint_of_large_values_does_not_overflow():
+    # (a + b) / 2 is inf here even though both values and the answer are finite
+    assert sp.quantile([1e308, 1e308], 0.5) == 1e308
+    assert sp.quantile([1e308, 1.5e308], 0.5) == 1.25e308
+    assert sp.quantile([-1e308, -1e308], 0.5) == -1e308

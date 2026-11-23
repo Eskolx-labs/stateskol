@@ -138,7 +138,8 @@ def _sorted_quantile(xs, p):
     # If n*p is an integer, average the two surrounding values.
     if k == k.to_integral_value():
         r = int(k)
-        return (xs[r - 1] + xs[r]) / 2
+        # halve first so two large finite values cannot overflow
+        return xs[r - 1] / 2 + xs[r] / 2
 
     # Otherwise, select the value at position ceil(n*p).
     position = int(k.to_integral_value(rounding=ROUND_CEILING))
