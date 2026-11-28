@@ -54,6 +54,15 @@ def check_bound(label, got, bound):
         label, repr(got), "within bound" if ok else "FAILED", "<= " + repr(bound)))
 
 
+def check_floor(label, got, floor):
+    """The other direction, for claims of the form 'at least this wrong'."""
+    ok = got >= floor
+    if not ok:
+        FAILURES.append(label)
+    print("  {:<38} {:<22} {} {}".format(
+        label, repr(got), "at or above" if ok else "FAILED", ">= " + repr(floor)))
+
+
 def exact_covariance(x, y, ddof=1):
     """The truth, in rationals: no rounding anywhere."""
     n = len(x)
@@ -182,13 +191,22 @@ def main():
     print("  {:<38} {}".format("iqr of both columns", (iqr(tied_x), iqr(tied_y))))
     tied = bivariate_online_update(tied_x, tied_y)
     check("one-pass covariance of the tied pair", tied.covariance(), 13 / 3)
-    print("  {:<38} {!r}".format(
-        "the naive formula says", naive_covariance(tied_x, tied_y)))
+    naive_tied = naive_covariance(tied_x, tied_y)
+    print("  {:<38} {!r}".format("the naive formula says", naive_tied))
     print("   Seven identical values out of nine makes h = 2 * IQR * n ** (-1/3)")
     print("   zero, so the binning rule must refuse. The co-moment is still")
-    print("   defined and the state returns 13/3 exactly. The naive formula")
-    print("   returns 256.0, which is 59 times too large: that is the garbage the")
-    print("   brief warns about, and no caller notices it by looking at the number.")
+    print("   defined and the state returns 13/3 exactly.")
+    print("   The naive formula can only return a multiple of 128 here: every")
+    print("   product sits near 1e18, where a double resolves to 128, and every")
+    print("   partial sum near 9e18, where it resolves to 1024. The answer is")
+    print("   4.333, so the error is at least as large as the value:")
+    check_floor("naive error, against the answer itself", abs(naive_tied - 13 / 3), 13 / 3)
+    print("   Which multiple survives is not a property of the formula. CPython")
+    print("   3.12 gave sum() compensated summation for floats, and this row went")
+    print("   from 256.0 to 0.0 on the interpreter alone. sum([0.1] * 10) == {!r}".format(
+        sum([0.1] * 10)))
+    print("   detects which behaviour this run has. That is why the assertion")
+    print("   above is a bound and not a number copied out of one machine.")
     print("   m2_x is {!r} against an exact 4, so the row above".format(tied.m2_x))
     print("   is cancellation, not accuracy. The sums still sit on the 1e9 grid.")
     flat = bivariate_online_update([7, 7, 7, 7], [1, 2, 4, 8])

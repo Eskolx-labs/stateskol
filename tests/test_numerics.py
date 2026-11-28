@@ -424,13 +424,40 @@ class TestConstantAndTiedColumns(unittest.TestCase):
         self.assertNotEqual(state.m2_x, 4.0)
         self.assertLess(abs(state.m2_x - 4.0), math.ulp(1e9))
 
-    def test_the_naive_formula_returns_garbage_here_not_zero(self):
-        # Week 3's case produced exactly 0.0, which reads like a clean failure.
-        # On the tied pair the same formula returns 256.0 for an answer of
-        # 4.333: wrong by a factor of 59, and wrong in a way a caller cannot
-        # notice by inspection.
-        self.assertEqual(naive_covariance(self.TIED_X, self.TIED_Y), 256.0)
-        self.assertAlmostEqual(256.0 / (13 / 3), 59.07692307692308, places=12)
+    def test_the_naive_formula_is_wrong_by_at_least_the_answer_itself(self):
+        # Not a predicted residue, a structural one. Every product here is near
+        # 1e18, where a double resolves to 128, and every partial sum is near
+        # 9e18, where it resolves to 1024. So the subtraction can only return a
+        # multiple of 1024 and the covariance only a multiple of 128, while the
+        # truth is 13/3. That makes the error at least as large as the answer on
+        # any implementation, which is the claim worth keeping.
+        want = 13 / 3
+        naive = naive_covariance(self.TIED_X, self.TIED_Y)
+        self.assertEqual((naive * 8) % 1024, 0.0)
+        self.assertGreaterEqual(abs(naive - want), want)
+
+    def test_which_multiple_survives_is_a_cpython_version_artifact(self):
+        # Found by CI, not by me. This test asserted 256.0 and failed on the
+        # 3.12 matrix row with 0.0, because CPython 3.12 gave sum() Neumaier
+        # compensation for floats, so the naive formula stopped leaving its own
+        # accumulation error behind. sum([0.1] * 10) detects the behaviour:
+        # 0.9999999999999999 before 3.12, 1.0 from 3.12 on.
+        #
+        # The residue is therefore not part of the benchmark, only the size of
+        # the failure is. Pinning the residue made the suite a hostage of the
+        # interpreter, which is exactly the mistake this lane is about.
+        compensated = sum([0.1] * 10) == 1.0
+        naive = naive_covariance(self.TIED_X, self.TIED_Y)
+        self.assertEqual(naive, 0.0 if compensated else 256.0)
+
+    def test_an_exact_accumulator_still_returns_zero_because_the_products_carry_it(self):
+        # math.fsum removes the summation error completely, so this is the half
+        # of the failure no interpreter version can repair: summed exactly, the
+        # rounded products still differ from sum(x) * sum(y) / n by less than the
+        # grid they live on.
+        total = math.fsum(a * b for a, b in zip(self.TIED_X, self.TIED_Y))
+        naive = (total - sum(self.TIED_X) * sum(self.TIED_Y) / 9) / 8
+        self.assertEqual(naive, 0.0)
 
 
 class TestDocstringShape(unittest.TestCase):
