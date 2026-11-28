@@ -20,6 +20,7 @@ from stateskol.descriptive import (
     BivariateState,
     as_numeric,
     bivariate_online_update,
+    iqr,
     variance,
 )
 from stateskol.errors import (
@@ -367,6 +368,69 @@ class TestToleranceAnalysis(unittest.TestCase):
             bivariate_online_update([v + 1e9 for v in XA], [v + 1e9 for v in YA]).covariance(),
             0.0,
         )
+
+
+class TestConstantAndTiedColumns(unittest.TestCase):
+    """The two boundary cases the week 4 pack adds beyond length and magnitude.
+
+    A constant column is where a correlation dies. A majority of identical
+    values is where Freedman-Diaconis binning dies, because Q1 = Q3 and the bin
+    width comes out zero. Neither is a reason the co-moment should misbehave,
+    so the state reports the zero and the tie exactly, and the refusal stays in
+    the lane that owns it: Core C cannot refuse on s_x = 0 unless this lane
+    hands it a true zero rather than a small number near one.
+    """
+
+    # Seven of nine values identical in each column, shifted to 1e9 so the
+    # sample is degenerate for binning and hostile for the naive formula at the
+    # same time. Exact covariance is 13/3; exact m2_x is 4.
+    TIED_X = [1e9 + 5] * 7 + [1e9 + 6, 1e9 + 7]
+    TIED_Y = [1e9 + 2] * 7 + [1e9 + 9, 1e9 + 20]
+
+    def test_a_constant_column_reports_an_exact_zero(self):
+        state = bivariate_online_update([7, 7, 7, 7], [1, 2, 4, 8])
+        self.assertEqual(state.m2_x, 0.0)
+        self.assertEqual(state.variance_x(), 0.0)
+        self.assertEqual(state.co_moment, 0.0)
+        self.assertEqual(state.covariance(), 0.0)
+        self.assertEqual(state.n, 4)
+
+    def test_the_zero_is_exact_enough_that_dividing_by_it_raises(self):
+        # Pearson r is co_moment / sqrt(m2_x * m2_y). If this lane reported a
+        # residual like 4e-14 for a constant column, Core C would return an
+        # enormous or a meaningless r instead of raising ZeroVarianceError. The
+        # exact zero is the handover between the two lanes.
+        state = bivariate_online_update([7, 7, 7, 7], [1, 2, 4, 8])
+        with self.assertRaises(ZeroDivisionError):
+            state.co_moment / math.sqrt(state.m2_x * state.m2_y)
+
+    def test_zero_iqr_kills_the_bin_width_not_the_covariance(self):
+        # iqr() is week 3's, called here to prove the claim rather than assert
+        # it: both columns are degenerate for Freedman-Diaconis while x and y
+        # still move together, so Core A raises DegenerateBinError and this
+        # state has nothing to refuse.
+        self.assertEqual(iqr(self.TIED_X), 0.0)
+        self.assertEqual(iqr(self.TIED_Y), 0.0)
+        state = bivariate_online_update(self.TIED_X, self.TIED_Y)
+        self.assertEqual(state.covariance(), float(exact_covariance(
+            [v - 1e9 for v in self.TIED_X], [v - 1e9 for v in self.TIED_Y])))
+        self.assertEqual(state.covariance(), 13 / 3)
+
+    def test_the_sums_still_carry_the_mean_grid_even_when_the_quotient_lands(self):
+        # The covariance above is exact, which is cancellation, not accuracy:
+        # m2_x is 3.999999925494194 against an exact 4. Pinned so nobody reads
+        # the previous test as proof that a shifted sample costs nothing.
+        state = bivariate_online_update(self.TIED_X, self.TIED_Y)
+        self.assertNotEqual(state.m2_x, 4.0)
+        self.assertLess(abs(state.m2_x - 4.0), math.ulp(1e9))
+
+    def test_the_naive_formula_returns_garbage_here_not_zero(self):
+        # Week 3's case produced exactly 0.0, which reads like a clean failure.
+        # On the tied pair the same formula returns 256.0 for an answer of
+        # 4.333: wrong by a factor of 59, and wrong in a way a caller cannot
+        # notice by inspection.
+        self.assertEqual(naive_covariance(self.TIED_X, self.TIED_Y), 256.0)
+        self.assertAlmostEqual(256.0 / (13 / 3), 59.07692307692308, places=12)
 
 
 class TestDocstringShape(unittest.TestCase):

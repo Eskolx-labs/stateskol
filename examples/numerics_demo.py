@@ -25,6 +25,7 @@ from stateskol.descriptive import (  # noqa: E402
     DimensionMismatchError,
     as_numeric,
     bivariate_online_update,
+    iqr,
 )
 from stateskol.errors import ContractError, DomainError, EmptyDataError  # noqa: E402
 
@@ -173,6 +174,28 @@ def main():
     check("columns dropped separately would say", wrong.covariance(), 10.0)
     print("   Independent column dropping pairs 3 with 20 instead of 30. It")
     print("   returns a clean number for a sample nobody measured.")
+
+    # ---------------------------------------------------------------- 5b
+    print("\n5b. degenerate spread: a zero IQR is Core A's refusal, not this one")
+    tied_x = [1e9 + 5] * 7 + [1e9 + 6, 1e9 + 7]
+    tied_y = [1e9 + 2] * 7 + [1e9 + 9, 1e9 + 20]
+    print("  {:<38} {}".format("iqr of both columns", (iqr(tied_x), iqr(tied_y))))
+    tied = bivariate_online_update(tied_x, tied_y)
+    check("one-pass covariance of the tied pair", tied.covariance(), 13 / 3)
+    print("  {:<38} {!r}".format(
+        "the naive formula says", naive_covariance(tied_x, tied_y)))
+    print("   Seven identical values out of nine makes h = 2 * IQR * n ** (-1/3)")
+    print("   zero, so the binning rule must refuse. The co-moment is still")
+    print("   defined and the state returns 13/3 exactly. The naive formula")
+    print("   returns 256.0, which is 59 times too large: that is the garbage the")
+    print("   brief warns about, and no caller notices it by looking at the number.")
+    print("   m2_x is {!r} against an exact 4, so the row above".format(tied.m2_x))
+    print("   is cancellation, not accuracy. The sums still sit on the 1e9 grid.")
+    flat = bivariate_online_update([7, 7, 7, 7], [1, 2, 4, 8])
+    check("constant column, zero spread", flat.m2_x, 0.0)
+    check("constant column, zero co-moment", flat.co_moment, 0.0)
+    print("   Core C can only raise ZeroVarianceError because these are exactly")
+    print("   zero. A residual of 4e-14 would let it divide and print a number.")
 
     # ---------------------------------------------------------------- 6
     print("\n6. refusals, one row per rule")
