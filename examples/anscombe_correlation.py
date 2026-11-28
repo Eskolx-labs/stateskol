@@ -7,8 +7,8 @@ Run it with nothing installed:
 The brief's Sunday slot asks for *a dataset where correlation severely misleads*.
 This prints four of them, in the order they work as a talk:
 
-  1. Anscombe's quartet - four datasets, one regression line, and r agreeing to
-     three decimals. The summary is not describing the data.
+  1. Anscombe's quartet - four datasets, one regression line, and r inside a
+     few ten-thousandths across all four. The summary is not describing the data.
   2. Panel IV with its single leverage point removed - r is not small there, it
      is undefined, because the remaining ten x values are all 8.
   3. y = x^2 over a symmetric design - r is exactly 0.0, not approximately, on a
@@ -110,8 +110,9 @@ def section(title):
 
 def demo_anscombe():
     section("1. Anscombe's quartet: one number, four datasets")
-    print("  The data is Anscombe (1973), typed into this file from the paper's")
-    print("  four 11-point tables. No summary figure is transcribed from anywhere.\n")
+    print("  The 44 pairs below are the Anscombe (1973) quartet as every standard")
+    print("  source reproduces it. No summary figure - no r, no mean, no variance - is")
+    print("  transcribed from any table. Each one is computed in this file, twice.\n")
     print("  {:<30} {:>11} {:>11} {:>9} {:>9}".format(
         "dataset", "r", "covariance", "slope", "intercept"))
     rows, rs = [], []
@@ -131,19 +132,35 @@ def demo_anscombe():
         rs.append((label, r, r_exact, state.covariance(), cov, slope, intercept))
         print("  {:<30} {:>11.6f} {:>11.4f} {:>9.5f} {:>9.5f}".format(
             label, r, state.covariance(), slope, intercept))
-    print("\n  Same fit, y = 3.00 + 0.50x, in all four. r to three decimals:",
-          [round(v[1], 3) for v in rs])
-    print("  r-squared:", " ".join("{:.4f}".format(v[1] * v[1]) for v in rs))
+    three = [round(v[1], 3) for v in rs]
+    r2 = [v[1] * v[1] for v in rs]
+    fit = [(round(v[5], 2), round(v[6], 2)) for v in rs]
+    print("\n  Same fit, y = 3.00 + 0.50x, in all four:", fit)
+    print("  r to three decimals:", three)
+    print("  r-squared:", " ".join("{:.6f}".format(v) for v in r2))
+    if len(set(fit)) != 1:
+        failures.append("the four least-squares fits do not round to one line: "
+                        "{}".format(fit))
+    if three.count(0.816) != 3 or three.count(0.817) != 1:
+        failures.append("r to three decimals is not three 0.816 and one 0.817: "
+                        "{}".format(three))
+    if sorted(set(round(v, 2) for v in r2)) != [0.67]:
+        failures.append("r-squared does not round to 0.67 in all four: {}".format(
+            [round(v, 2) for v in r2]))
     print("\n  Cross-checked against exact rational arithmetic, gap in ulps:")
     for label, r, r_exact, cov_got, cov_want, slope, intercept in rs:
         print("    {:<30} r gap {:.0f} ulp   covariance gap {:.0f} ulp".format(
             label.split()[0],
             abs(r - r_exact) / math.ulp(r_exact),
             abs(cov_got - cov_want) / math.ulp(cov_want)))
-    print("\n  Anscombe's own Table 1 prints 0.816, 0.816, 0.816, 0.817 - so even")
-    print("  the published digits are a rounding. The honest claim is not \"the same")
-    print("  r\", it is \"indistinguishable as summaries\": r-squared is 0.666 in all")
-    print("  four, and four different shapes share one regression line.")
+    spread = max(v[1] for v in rs) - min(v[1] for v in rs)
+    print("\n  The four r values are not identical: they span {:.6f}. Rounded the way".format(
+        spread))
+    print("  any table rounds them, three land on 0.816 and one on 0.817. r-squared spans")
+    print("  {:.4f} to {:.4f}, and all four are 0.67 to two decimals. So the honest".format(
+        min(r2), max(r2)))
+    print("  claim is not \"the same r\", it is \"indistinguishable as summaries\":")
+    print("  four different shapes, one fit line.")
 
 
 def demo_leverage():
