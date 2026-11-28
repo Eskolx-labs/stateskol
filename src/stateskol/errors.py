@@ -27,6 +27,13 @@ UnsupportedRuleError
     does not ship, such as quantile method="type6". The message must name the
     rule it refused and the one that is available, because a silent fallback
     to another definition is exactly what Hyndman & Fan (1996) warn against.
+DimensionMismatchError
+    Subclass of ValueError. Raised when two series are meant to be paired but
+    are not the same length, so no pairing exists to summarise. A subclass of
+    IndexError would be a lie: nothing was out of range while reading, the two
+    inputs simply describe different samples. Truncating the longer series is
+    the alternative the contract refuses, because it silently changes the
+    sample the caller handed over.
 """
 
 
@@ -68,3 +75,17 @@ class UnsupportedRuleError(ValueError):
         super().__init__(message)
         self.rule = rule
         self.available = available
+
+
+class DimensionMismatchError(ValueError):
+    """The two series were not the same length, so they cannot be paired.
+
+    Attributes:
+        len_x: length of the first series as given.
+        len_y: length of the second series as given.
+    """
+
+    def __init__(self, message, len_x=None, len_y=None):
+        super().__init__(message)
+        self.len_x = len_x
+        self.len_y = len_y

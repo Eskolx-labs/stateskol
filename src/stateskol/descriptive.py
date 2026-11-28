@@ -64,12 +64,32 @@ Argument                   Behaviour                   Error
 ``ddof`` outside 0 or 1    refused, no silent n        DomainError
 mean of 0 for the CV       refused, not reported       DomainError
 =========================  ==========================  ========================
+
+Week 4, Numerics
+----------------
+``bivariate_online_update`` and ``BivariateState`` sit in the same file, in a
+second block below the week 3 one. They inherit the contract per column, and
+add the paired rules the bivariate case needs:
+
+=========================  ==========================  ==========================
+Argument                   Behaviour                   Error
+=========================  ==========================  ==========================
+``len(x) != len(y)``       refused, never truncated    DimensionMismatchError
+one side of a pair missing pair dropped and counted   recorded, not raised
+``n - ddof`` not positive  accessor refuses            EmptyDataError
+no complete pairs at all   state returned, n=0         accessors raise
+=========================  ==========================  ==========================
+
+An empty pair set returns a state instead of raising because the count is a
+finding, the same rule that makes ``count([])`` zero. Every accessor on that
+state raises ``EmptyDataError``, so no number is ever reported for nothing.
 """
 
 import math
 
 from stateskol.errors import (
     ContractError,
+    DimensionMismatchError,
     DomainError,
     EmptyDataError,
     UnknownPolicyError,
@@ -529,4 +549,241 @@ def coefficient_variation(data):
             "n={}, ddof=1".format(n)
         )
     return math.sqrt(m2 / (n - 1)) / mean
+
+
+# ---------------------------------------------------------------------------
+# Week 4, Numerics lane: the bivariate state.
+#
+# The reason this exists rather than a two-line formula is catastrophic
+# cancellation. The textbook covariance
+#     (sum(x * y) - sum(x) * sum(y) / n) / (n - 1)
+# returns exactly 0.0 for the brief's shifted pair, where the true sample
+# covariance is 10/3. With values near 1e9, sum(x * y) carries eighteen digits
+# of scale and a double holds fifteen to seventeen, so the subtraction removes
+# every significant digit before the division sees them. Chan, Golub & LeVeque
+# (1983) update the centred sums instead, so no large number is ever subtracted
+# from a large number.
+# ---------------------------------------------------------------------------
+
+
+class BivariateState:
+    """The six running sums a one-pass bivariate update keeps.
+
+    Chan, Golub & LeVeque (1983) extend Welford (1962) from one column to two.
+    After any number of pairs, these fields describe the sample read so far:
+
+        n              complete pairs folded in
+        mean_x         running mean of x
+        mean_y         running mean of y
+        m2_x           sum of squared deviations of x from mean_x
+        m2_y           sum of squared deviations of y from mean_y
+        co_moment      sum of the products of the paired deviations
+        dropped_pairs  pairs the complete-case rule removed
+
+    Every covariance, variance and correlation of the sample comes out of these
+    without a second pass, which is what keeps a ratio honest: the numerator
+    and the denominator cannot describe different samples, because there is
+    only one sample and one set of running sums.
+
+    The object is an accumulator, not a snapshot. add() changes it in place and
+    returns self, so a caller can stream pairs through it.
+    """
+
+    __slots__ = ("n", "mean_x", "mean_y", "m2_x", "m2_y", "co_moment",
+                 "dropped_pairs")
+
+    def __init__(self, n=0, mean_x=0.0, mean_y=0.0, m2_x=0.0, m2_y=0.0,
+                 co_moment=0.0, dropped_pairs=0):
+        self.n = n
+        self.mean_x = mean_x
+        self.mean_y = mean_y
+        self.m2_x = m2_x
+        self.m2_y = m2_y
+        self.co_moment = co_moment
+        self.dropped_pairs = dropped_pairs
+
+    def __repr__(self):
+        return ("BivariateState(n={}, mean_x={!r}, mean_y={!r}, m2_x={!r}, "
+                "m2_y={!r}, co_moment={!r}, dropped_pairs={})".format(
+                    self.n, self.mean_x, self.mean_y, self.m2_x, self.m2_y,
+                    self.co_moment, self.dropped_pairs))
+
+    def add(self, x, y):
+        """Fold one complete pair into the state, in place, and return self.
+
+        Inputs:  x, y  one measurement from each series. Both must be present
+                     values the v0.1 contract accepts.
+        Outputs: self, so calls chain. The state is changed, not copied.
+        Assumptions: Unknown. The caller must state the missingness mechanism (MCAR, MAR, MNAR).
+                 The k-th update divides by k, so the state is the mean of the
+                 pairs it holds, not of any larger sample the caller meant.
+        Missing: refused. add() is the primitive, and a missing pair passed
+                 straight to it is a caller who has not decided the paired
+                 policy yet. Use bivariate_online_update() to apply the
+                 complete-case rule.
+        Errors:  ContractError for a missing or non-contract value, carrying
+                 the index the pair arrived at.
+        Example:
+            >>> state = BivariateState().add(1, 3).add(2, 4)
+            >>> state.n, state.mean_x, state.co_moment
+            (2, 1.5, 0.5)
+        """
+        if _is_missing(x) or _is_missing(y):
+            raise ContractError(
+                "add() takes a complete pair; the complete-case rule lives in "
+                "bivariate_online_update(). pair index {}: ({!r}, {!r})".format(
+                    self.n, x, y),
+                index=self.n,
+                value=(x, y),
+            )
+        _validate(x, self.n)
+        _validate(y, self.n)
+        fx = float(x)
+        fy = float(y)
+        k = self.n + 1
+        dx = fx - self.mean_x
+        dy = fy - self.mean_y
+        self.mean_x += dx / k
+        self.mean_y += dy / k
+        self.m2_x += dx * (fx - self.mean_x)
+        self.m2_y += dy * (fy - self.mean_y)
+        self.co_moment += (k - 1) / k * dx * dy
+        self.n = k
+        return self
+
+    def _require_divisor(self, ddof, what):
+        """Refuse a divisor the state cannot pay."""
+        _check_ddof(ddof)
+        if self.n - ddof <= 0:
+            raise EmptyDataError(
+                "{} needs more complete pairs than the divisor takes: "
+                "n={}, ddof={}".format(what, self.n, ddof)
+            )
+
+    def covariance(self, ddof=1):
+        """Co-moment divided by n - ddof, from the sums this state already holds.
+
+        Inputs:  ddof  the divisor is n - ddof. Default 1, the sample
+                     covariance, matching variance()'s default. 0 gives the
+                     population covariance. Any other value raises.
+        Outputs: float. Positive when the pairs rise together, negative when
+                 one rises as the other falls, and in units that are the
+                 product of the two columns, which is the reason correlation
+                 exists. It scales with the units, so it is not comparable
+                 across pairs of variables.
+        Assumptions: Unknown. The caller must state the missingness mechanism (MCAR, MAR, MNAR).
+                 ddof=1 claims an unbiased estimate of a wider population;
+                 ddof=0 describes only the pairs in hand.
+        Missing: none here. The complete-case rule already ran, and
+                 dropped_pairs records how many pairs it removed.
+        Errors:  DomainError if ddof is not 0 or 1; EmptyDataError if the state
+                 holds too few pairs to pay the divisor.
+        Example:
+            >>> bivariate_online_update([1e9 + 1, 1e9 + 2, 1e9 + 3, 1e9 + 4],
+            ...                         [1e9 + 2, 1e9 + 4, 1e9 + 6, 1e9 + 8]).covariance()
+            3.3333333333333335
+        """
+        self._require_divisor(ddof, "covariance")
+        return self.co_moment / (self.n - ddof)
+
+    def variance_x(self, ddof=1):
+        """Sample variance of x, from the same pass that produced the co-moment.
+
+        Inputs:  ddof  as in covariance(); default 1.
+        Outputs: float, always >= 0. Equals variance(x) up to the last bit,
+                 because it is the same Welford update run inside the pair.
+        Assumptions: Unknown. The caller must state the missingness mechanism (MCAR, MAR, MNAR).
+        Missing: as in covariance(). Note the n here is complete pairs, so a
+                 dropped pair removes x from this variance as well.
+        Errors:  DomainError if ddof is not 0 or 1; EmptyDataError if n - ddof
+                 would not be positive.
+        Example:
+            >>> bivariate_online_update([1, 2], [3, 4]).variance_x()
+            0.5
+        """
+        self._require_divisor(ddof, "variance")
+        return self.m2_x / (self.n - ddof)
+
+    def variance_y(self, ddof=1):
+        """Sample variance of y, from the same pass that produced the co-moment.
+
+        Inputs:  ddof  as in covariance(); default 1.
+        Outputs: float, always >= 0. A zero here means y never moved, and a
+                 correlation built on this state would divide by zero.
+        Assumptions: Unknown. The caller must state the missingness mechanism (MCAR, MAR, MNAR).
+        Missing: as in covariance().
+        Errors:  DomainError if ddof is not 0 or 1; EmptyDataError if n - ddof
+                 would not be positive.
+        Example:
+            >>> bivariate_online_update([1, 2], [3, 3]).variance_y()
+            0.0
+        """
+        self._require_divisor(ddof, "variance")
+        return self.m2_y / (self.n - ddof)
+
+
+def bivariate_online_update(x, y):
+    """One pass over two series, returning their running bivariate state.
+
+    Inputs:  x, y  iterables the v0.1 contract accepts, of equal length. Each
+                 is consumed once. Pairing is positional: x[i] goes with y[i].
+    Outputs: BivariateState holding n, both running means, both sums of squared
+             deviations, the co-moment and dropped_pairs. This is the update
+             of Chan, Golub & LeVeque (1983), the bivariate form of the
+             Welford (1962) recurrence variance() already runs:
+                 C_k = C_{k-1} + ((k - 1) / k) (x_k - xbar_{k-1})(y_k - ybar_{k-1})
+             and covariance() divides the final C by n - ddof. An empty or
+             fully dropped pair set returns a state with n=0 rather than
+             raising, because the count is a finding, not a value, exactly as
+             count([]) is 0. Every accessor on that state raises EmptyDataError.
+             Accuracy limit: the running mean is a double at the data's own
+             magnitude, so a series near 1e9 stores its mean on a grid of
+             2**-23, about 1.19e-7. The increment dx / k is smaller than that
+             grid and is quantised, and the co-moment inherits the error. It is
+             bounded in tests/test_numerics.py, and it is why the same 1983
+             paper also recommends the shifted-data variant, which subtracts the
+             first observation before accumulating and is not what ships here.
+    Assumptions: Unknown. The caller must state the missingness mechanism (MCAR, MAR, MNAR).
+             Complete-case pairing also assumes the two series were sampled
+             together, in the same order. Nothing here can detect a y that
+             belongs to a different x.
+    Missing: complete-case. A pair is dropped when either side is missing, and
+             each drop increments dropped_pairs, because dropping the x of one
+             pair while keeping its y would change both columns' samples. The
+             week 2 audit object is not wired in yet, so the record is a count
+             on the state rather than a MissingReport; the drop is declared
+             here rather than hidden.
+    Errors:  DimensionMismatchError if the two series differ in length, raised
+             after both are read and before any arithmetic. A generator cannot
+             be measured without consuming it, so a mismatched generator is
+             drained by the refusal: pass lists if you need the input back.
+             Neither series is truncated to fit the other. ContractError for a
+             value the contract refuses, EmptyDataError from the accessors when
+             the state holds too few pairs.
+    Example:
+        >>> bivariate_online_update([1, 2, 3, 4], [2, 4, 6, 8])
+        BivariateState(n=4, mean_x=2.5, mean_y=5.0, m2_x=5.0, m2_y=20.0, co_moment=10.0, dropped_pairs=0)
+        >>> bivariate_online_update([1, 2, 3], [None, 5, 6]).dropped_pairs
+        1
+        >>> bivariate_online_update([1, 2], [3, 4]).covariance()
+        0.5
+    """
+    xs = list(x)
+    ys = list(y)
+    if len(xs) != len(ys):
+        raise DimensionMismatchError(
+            "paired series must be the same length: len(x)={}, len(y)={}. "
+            "Neither series is truncated to fit the other, because silently "
+            "dropping the tail would change the sample the caller handed "
+            "over.".format(len(xs), len(ys)),
+            len_x=len(xs),
+            len_y=len(ys),
+        )
+    state = BivariateState()
+    for a, b in zip(xs, ys):
+        if _is_missing(a) or _is_missing(b):
+            state.dropped_pairs += 1
+            continue
+        state.add(a, b)
+    return state
 
